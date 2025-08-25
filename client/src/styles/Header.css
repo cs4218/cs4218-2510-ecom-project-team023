@@ -1,0 +1,53 @@
+/* Navbar */
+.navbar {
+    background-color: whitesmoke; /* Set background color */
+  }
+  
+  .navbar-brand {
+    font-size: 1.5rem; /* Set font size */
+    font-weight: bold; /* Set font weight */
+  }
+  
+  .navbar-toggler {
+    border: none; /* Remove border */
+  }
+  
+  /* Navbar Links */
+  .navbar-nav .nav-link {
+    color: #212529; /* Set text color */
+    font-size: 1rem; /* Set font size */
+    margin-right: 10px; /* Add right margin */
+  }
+  
+  /* Active Link */
+  .navbar-nav .nav-link.active {
+    color: goldenrod; /* Set active link color */
+  }
+  
+  /* Dropdown Menu */
+  .dropdown-menu {
+    background-color: goldenrod; /* Set background color */
+  }
+  
+  .dropdown-item {
+    color: #212529; /* Set text color */
+  }
+  
+  /* Badge */
+  .ant-badge-count {
+    background-color: #ff4d4f; /* Set background color */
+    color: #fff; /* Set text color */
+  }
+  
+  /* Search Input */
+  .search-input {
+    margin-right: 10px; /* Add right margin */
+  }
+  
+  /* Responsive Styling */
+  @media (max-width: 768px) {
+    .navbar-nav {
+      margin-top: 10px; /* Add top margin */
+    }
+  }
+  

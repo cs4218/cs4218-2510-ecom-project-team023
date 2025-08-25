@@ -1,0 +1,177 @@
+{
+  "enableSearch": true,
+  "pages": [
+    {
+      "src": "404.md",
+      "title": "Page not found",
+      "headings": {},
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic1a.md",
+      "title": "Topic 1",
+      "headings": {
+        "mern-stack-ecommerce-project-overview": "MERN Stack Ecommerce Project Overview",
+        "introduction": "Introduction",
+        "features": "Features",
+        "testing-and-quality-assurance": "Testing and Quality Assurance",
+        "project-extension": "Project Extension"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic1b.md",
+      "title": "Topic 1",
+      "headings": {
+        "setting-up-the-existing-project": "Setting Up the Existing Project",
+        "prerequisite-knowledge": "Prerequisite Knowledge",
+        "installing-node-js": "Installing Node.js",
+        "using-visual-studio-code-vscode": "Using Visual Studio Code (VSCode)",
+        "mongodb-setup": "MongoDB Setup",
+        "downloading-and-using-a-mern-app-from-github": "Downloading and Using a MERN App from GitHub",
+        "1-clone-the-repository": "1. Clone the Repository",
+        "2-install-dependencies": "2. Install Dependencies",
+        "3-set-up-environment-variables": "3. Set Up Environment Variables",
+        "4-running-the-application": "4. Running the Application"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic1c.md",
+      "title": "Topic 1",
+      "headings": {
+        "unit-testing-with-jest": "Unit Testing with Jest",
+        "getting-started-with-jest": "Getting Started with Jest"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic1d.md",
+      "title": "Topic 1",
+      "headings": {
+        "debugging-with-visual-studio-code-vs-code": "Debugging with Visual Studio Code (VS Code)",
+        "setting-up-debugger-in-vs-code": "Setting Up Debugger in VS Code",
+        "basic-debugging-workflow": "Basic Debugging Workflow",
+        "advanced-debugging-features": "Advanced Debugging Features",
+        "conclusion": "Conclusion"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic1e.md",
+      "title": "Topic 1",
+      "headings": {
+        "code-coverage-and-analysis-with-sonarqube": "Code Coverage and Analysis with SonarQube",
+        "setting-up-and-using-sonarqube": "Setting Up and Using SonarQube"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic1f.md",
+      "title": "Topic 1",
+      "headings": {
+        "ui-testing-with-playwright": "UI Testing with Playwright",
+        "introduction": "Introduction",
+        "installation": "Installation",
+        "installing-playwright": "Installing Playwright",
+        "getting-started": "Getting Started",
+        "what-s-installed": "What's Installed",
+        "running-the-example-test": "Running the Example Test",
+        "running-the-example-test-in-ui-mode": "Running the Example Test in UI Mode",
+        "updating-playwright": "Updating Playwright",
+        "system-requirements": "System Requirements",
+        "what-s-next": "What's Next"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic1g.md",
+      "title": "Topic 1",
+      "headings": {
+        "jmeter-load-testing": "JMeter Load Testing",
+        "download-and-installation": "Download and Installation",
+        "load-testing-with-jmeter": "Load Testing with JMeter",
+        "load-test-analysis": "Load Test Analysis"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic2a.md",
+      "title": "Topic 2",
+      "headings": {
+        "topic-2": "Topic 2"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic2b.md",
+      "title": "Topic 3b",
+      "headings": {
+        "topic-3b": "Topic 3b"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic2c.md",
+      "headings": {},
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic2d.md",
+      "headings": {},
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic2e.md",
+      "headings": {},
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic2f.md",
+      "headings": {},
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic2g.md",
+      "headings": {},
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic3.md",
+      "title": "Topic 3a",
+      "headings": {
+        "topic-3a": "Topic 3a"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic4a.md",
+      "title": "Topic 4",
+      "headings": {
+        "topic-4": "Topic 4"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic4b.md",
+      "headings": {},
+      "headingKeywords": {}
+    },
+    {
+      "src": "contents/topic5.md",
+      "title": "Topic 1",
+      "headings": {
+        "tools": "Tools"
+      },
+      "headingKeywords": {}
+    },
+    {
+      "src": "index.md",
+      "title": "Home Page",
+      "headings": {
+        "project-introduction": "Project introduction"
+      },
+      "headingKeywords": {}
+    }
+  ]
+}
