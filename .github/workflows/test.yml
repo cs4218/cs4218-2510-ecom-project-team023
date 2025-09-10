@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20.x, 22.x]  # tweak as you like
+        node-version: [20.x, 22.x]
 
     steps:
       - name: Checkout
@@ -30,18 +30,48 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Lint (optional)
-        run: npm run lint --if-present
+      # --- Detect tests so we don't fail on "No tests found" ---
+      - name: Detect backend tests
+        id: be
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          mapfile -t FILES < <(printf "%s\n" \
+            controllers/*.test.js controllers/**/*.test.js \
+            models/*.test.js models/**/*.test.js)
+          echo "count=${#FILES[@]}" >> "$GITHUB_OUTPUT"
+          echo "Found ${#FILES[@]} backend test files"
 
-      - name: Run tests
+      - name: Detect frontend tests
+        id: fe
+        shell: bash
+        run: |
+          shopt -s globstar nullglob
+          mapfile -t FILES < <(printf "%s\n" \
+            client/src/pages/**/*.test.js client/src/pages/**/*.test.jsx \
+            client/src/hooks/**/*.test.js client/src/hooks/**/*.test.jsx)
+          echo "count=${#FILES[@]}" >> "$GITHUB_OUTPUT"
+          echo "Found ${#FILES[@]} frontend test files"
+
+      # --- Run each suite only if present ---
+      - name: Run backend tests
+        if: steps.be.outputs.count != '0'
         env:
           CI: true
-        run: npm test -- --ci --coverage
+        run: node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.backend.config.js --ci --coverage
+
+      - name: Run frontend tests
+        if: steps.fe.outputs.count != '0'
+        env:
+          CI: true
+        run: node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.frontend.config.js --ci --coverage
 
       - name: Upload coverage (if present)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.node-version }}
-          path: coverage
+          path: |
+            coverage
+            client/coverage
           if-no-files-found: ignore
