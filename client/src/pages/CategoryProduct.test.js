@@ -1,4 +1,5 @@
 // client/src/pages/CategoryProduct.test.js
+// list of jest tests written by chatgpt 1, 4 and 6
 import React from "react";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";

@@ -1,3 +1,4 @@
+// list of jest tests written by chatgpt Happy path and setup
 import React from "react";
 import { render, screen, act } from "@testing-library/react";
 import "@testing-library/jest-dom";

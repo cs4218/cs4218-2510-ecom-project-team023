@@ -1,3 +1,4 @@
+/* list of jest tests written by chatgpt getProductController, getPhotoController, productFiltersController, Braintree tests*/
 import {
   jest, describe, test, expect, beforeEach,
 } from "@jest/globals";

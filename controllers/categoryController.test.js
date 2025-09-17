@@ -1,3 +1,4 @@
+// list of jest tests written by chatgpt categoryControlller, singleCategoryController
 import {
   jest, describe, test, expect, beforeEach,
 } from "@jest/globals";

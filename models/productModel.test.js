@@ -1,4 +1,5 @@
 /** @jest-environment node */
+// list of jest tests written by chatgpt Product schema regressions (tighten constraints)
 import {
   jest, describe, test, expect, beforeAll, afterAll, beforeEach,
 } from "@jest/globals";
