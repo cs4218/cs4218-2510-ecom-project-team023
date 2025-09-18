@@ -229,6 +229,48 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(screen.getByText("Payment")).toBeInTheDocument();
       expect(screen.getByText("Quantity")).toBeInTheDocument();
     });
+
+    it('renders order details and products correctly from mock data', async () => {
+      // UNIT TEST: Verifies that the component correctly maps and renders all provided order and product data.
+      const mockOrders = [
+        {
+          _id: "order1",
+          status: "Processing",
+          buyer: { name: "Jane Doe" },
+          createAt: "2025-09-17T12:00:00.000Z",
+          payment: { success: true },
+          products: [
+            {
+              _id: "prod1",
+              name: "Test Product A",
+              description: "A very detailed description for product A.",
+              price: 150,
+            },
+          ],
+        },
+      ];
+      axios.get.mockResolvedValueOnce({ data: mockOrders });
+
+      mockUseAuth.mockReturnValue([
+        { token: "valid-token", user: { name: "Test User" } },
+        jest.fn(),
+      ]);
+
+      render(<Orders />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Processing")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+      expect(screen.getByText("Success")).toBeInTheDocument();
+      expect(screen.getByText("1")).toBeInTheDocument();
+      expect(screen.getByText("Test Product A")).toBeInTheDocument();
+      expect(
+        screen.getByText("A very detailed descriptio")
+      ).toBeInTheDocument();
+      expect(screen.getByText("Price : 150")).toBeInTheDocument();
+    });
   });
 
   // DATA TRANSFORMATION LOGIC TESTS
@@ -360,12 +402,45 @@ describe("Orders Component - Unit Tests Only", () => {
       rerender(<Orders />);
       expect(screen.getByText("All Orders")).toBeInTheDocument();
     });
+    
+    it('calls getOrders when auth token is present', async () => {
+      // UNIT TEST: Verifies that the getOrders API call is triggered when an auth token exists.
+      const mockOrders = [
+        {
+          _id: "1",
+          status: "Test",
+          buyer: { name: "Test" },
+          createAt: "2023-01-01",
+          payment: { success: true },
+          products: [],
+        },
+      ];
+      axios.get.mockResolvedValueOnce({ data: mockOrders });
+      mockUseAuth.mockReturnValue([
+        { token: "valid-token", user: { name: "Test User" } },
+        jest.fn(),
+      ]);
+      render(<Orders />);
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      await waitFor(() => {
+        expect(screen.getByText("Test")).toBeInTheDocument();
+      });
+    });
+
+    it('does not call getOrders when auth token is not present', () => {
+      // UNIT TEST: Verifies that the getOrders API call is NOT triggered when no auth token is available.
+      axios.get.mockClear();
+      mockUseAuth.mockReturnValue([{ user: { name: "Test User" } }, jest.fn()]);
+      render(<Orders />);
+      expect(axios.get).not.toHaveBeenCalled();
+    });
   });
 
   // ERROR HANDLING LOGIC TESTS
   describe("Error Handling Logic", () => {
     it("handles malformed order data gracefully", () => {
-      // UNIT TEST: Tests component resilience to bad data
+      // UNIT TEST: Tests component resilience to bad data (purely on input)
       const processOrderData = (orders) => {
         if (!orders || !Array.isArray(orders)) return [];
         return orders.filter((order) => order && order._id);
@@ -440,6 +515,39 @@ describe("Orders Component - Unit Tests Only", () => {
       ]);
 
       expect(() => rerender(<Orders />)).not.toThrow();
+    });
+
+    it('handles unmounting gracefully after API call starts', async () => {
+      // UNIT TEST: Verifies the component does not cause a memory leak by updating state on an unmounted component.
+      const mockPromise = new Promise(resolve => {});
+      axios.get.mockImplementation(() => mockPromise);
+      mockUseAuth.mockReturnValue([{ token: 'valid-token' }, jest.fn()]);
+      const consoleErrorSpy = jest.spyOn(console, 'error');
+      const { unmount } = render(<Orders />);
+      unmount();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('handles malformed order data gracefully', async () => {
+      // UNIT TEST: Component-level; verifies the component gracefully handles orders with missing or null properties.
+      const malformedOrder = {
+        _id: "order3",
+        status: "Processing",
+        createAt: "2025-09-17T12:00:00.000Z",
+        payment: { success: false },
+        products: null,
+      };
+      axios.get.mockResolvedValueOnce({ data: [malformedOrder] });
+      mockUseAuth.mockReturnValue([{ token: 'valid-token' }, jest.fn()]);
+      render(<Orders />);
+      await waitFor(() => {
+        expect(screen.getByText("Processing")).toBeInTheDocument();
+      });
+      expect(screen.queryByText("undefined")).not.toBeInTheDocument();
+      expect(screen.getByText("Failed")).toBeInTheDocument();
+      expect(screen.getByText("0")).toBeInTheDocument();
     });
   });
 
