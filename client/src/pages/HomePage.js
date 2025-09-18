@@ -8,32 +8,21 @@ import toast from "react-hot-toast";
 import Layout from "./../components/Layout";
 import { AiOutlineReload } from "react-icons/ai";
 import "../styles/Homepages.css";
+import useCategory from "../hooks/useCategory";
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useCart();
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const categories = useCategory();
+  console.log(categories);
   const [checked, setChecked] = useState([]);
   const [radio, setRadio] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  //get all cat
-  const getAllCategory = async () => {
-    try {
-      const { data } = await axios.get("/api/v1/category/get-category");
-      if (data?.success) {
-        setCategories(data?.category);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   useEffect(() => {
-    getAllCategory();
     getTotal();
   }, []);
   //get products
@@ -59,11 +48,6 @@ const HomePage = () => {
     }
   };
 
-  useEffect(() => {
-    if (page === 1) return;
-    loadMore();
-  }, [page]);
-  //load more
   const loadMore = async () => {
     try {
       setLoading(true);
@@ -76,6 +60,12 @@ const HomePage = () => {
     }
   };
 
+  useEffect(() => {
+    if (page === 1) return;
+    loadMore();
+  }, [page]);
+  //load more
+
   // filter by cat
   const handleFilter = (value, id) => {
     let all = [...checked];
@@ -86,6 +76,7 @@ const HomePage = () => {
     }
     setChecked(all);
   };
+
   useEffect(() => {
     if (!checked.length || !radio.length) getAllProducts();
   }, [checked.length, radio.length]);
@@ -119,23 +110,24 @@ const HomePage = () => {
       <div className="container-fluid row mt-3 home-page">
         <div className="col-md-3 filters">
           <h4 className="text-center">Filter By Category</h4>
-          <div className="d-flex flex-column">
+          <div className="d-flex flex-column" data-testid="category-filter">
             {categories?.map((c) => (
               <Checkbox
                 key={c._id}
                 onChange={(e) => handleFilter(e.target.checked, c._id)}
+                data-testid={`category-${c._id}`}
               >
                 {c.name}
               </Checkbox>
             ))}
           </div>
           {/* price filter */}
-          <h4 className="text-center mt-4">Filter By Price</h4>
+          <h4 className="text-center mt-4" data-testId="price-filter">Filter By Price</h4>
           <div className="d-flex flex-column">
             <Radio.Group onChange={(e) => setRadio(e.target.value)}>
               {Prices?.map((p) => (
-                <div key={p._id}>
-                  <Radio value={p.array}>{p.name}</Radio>
+                <div key={p._id} data-testId={`price-{p._id}`}>
+                  <Radio key={p._id} value={p.array}>{p.name}</Radio>
                 </div>
               ))}
             </Radio.Group>
