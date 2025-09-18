@@ -1,6 +1,7 @@
 import React from "react";
 
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
+import { useCart } from "../context/cart";
 import HomePage from "./HomePage";
 import useCategory from "../hooks/useCategory";
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -30,7 +31,7 @@ jest.mock('../context/search', () => ({
 
 
 describe('HomePage Initial Render', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     // Mock axios responses
     axios.get.mockResolvedValueOnce({
@@ -45,9 +46,117 @@ describe('HomePage Initial Render', () => {
         ],
       },
     });
+    await render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+        </Routes>
+      </MemoryRouter>
+    );
   });
 
-  it('should render without crashing and show categories', async () => {
+  // this are kept together because node does not support executing multiple test when waiting for promises
+  test('should category filters without error', async () => {
+    // Wait for category-filter container to be in the document
+    expect(screen.getByTestId('category-filter')).toBeInTheDocument();
+    expect(screen.getByTestId('category-1')).toBeInTheDocument();
+    expect(screen.getByTestId('category-2')).toBeInTheDocument();
+  });
+
+  test('should render price filters without error', async () => {
+    expect(screen.getByTestId('price-filter')).toBeInTheDocument();
+
+    for (let i = 0; i < Prices.length; i++) {
+      expect(screen.getByTestId(`price-${Prices[i]._id}`)).toBeInTheDocument();
+    }
+  });
+});
+
+
+describe('HomePage Load More functionality', () => {
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    // Mock axios responses
+    axios.get.mockResolvedValueOnce({
+      data: { total: 5 }, // Mock total count of products
+    });
+
+    axios.get.mockResolvedValueOnce({
+      data: {
+        products: [
+          { _id: '1', name: 'Product 1', price: 100, slug: 'product-1', description: "product1" },
+          { _id: '2', name: 'Product 2', price: 200, slug: 'product-2', description: "product2" },
+        ],
+      },
+    });
+
+    // Mock the next page response for load more
+    axios.get.mockResolvedValueOnce({
+      data: {
+        products: [
+          { _id: '3', name: 'Product 3', price: 300, slug: 'product-3', description: "product3" },
+          { _id: '4', name: 'Product 4', price: 400, slug: 'product-4', description: "product4" },
+        ],
+      },
+    });
+
+    // Initial render of HomePage
+    await render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  });
+
+  test('should render initial products and load more products when button is clicked', async () => {
+    // Wait for initial products to be rendered
+    await waitFor(() => {
+      expect(screen.getByTestId("product-1")).toBeInTheDocument();
+      expect(screen.getByTestId("product-2")).toBeInTheDocument();
+    });
+
+    // Simulate the "Load More" button click that triggers `useEffect` for next page
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("btn-load-more"));
+    });
+
+    // Wait for the new products to be rendered after the page change
+    await waitFor(() => {
+      expect(screen.getByText('Product 3')).toBeInTheDocument();
+      expect(screen.getByText('Product 4')).toBeInTheDocument();
+    });
+
+    /*
+      1.
+    */
+    expect(axios.get).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('HomePage Load More functionality with error', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    // Mock initial successful responses
+    axios.get.mockResolvedValueOnce({
+      data: { total: 5 }, // Mock total count of products
+    });
+
+    axios.get.mockResolvedValueOnce({
+      data: {
+        products: [
+          { _id: '1', name: 'Product 1', price: 100, slug: 'product-1', description: "product1" },
+          { _id: '2', name: 'Product 2', price: 200, slug: 'product-2', description: "product2" },
+        ],
+      },
+    });
+
+    // Mock the next page response to simulate an error (when "Load More" is clicked)
+    axios.get.mockRejectedValueOnce(new Error('Failed to fetch products'));
+
+    // Initial render of HomePage
     render(
       <MemoryRouter initialEntries={['/']}>
         <Routes>
@@ -55,109 +164,85 @@ describe('HomePage Initial Render', () => {
         </Routes>
       </MemoryRouter>
     );
-    // Wait for category-filter container to be in the document
-    await waitFor(() => {
-        expect(screen.getByTestId('category-filter')).toBeInTheDocument();
-    });
-
-    // Wait for category-1 to appear
-    await waitFor(() => {
-        expect(screen.getByTestId('category-1')).toBeInTheDocument();
-    });
-
-    // Wait for category-2 to appear
-    await waitFor(() => {
-        expect(screen.getByTestId('category-2')).toBeInTheDocument();
-    });
   });
 
-    it('should render without crashing and show price filters', async () => {
-        render(
-            <MemoryRouter initialEntries={['/']}>
-            <Routes>
-                <Route path="/" element={<HomePage />} />
-            </Routes>
-            </MemoryRouter>
-        );
-        // Wait for category-filter container to be in the document
-        await waitFor(() => {
-            expect(screen.getByTestId('price-filter')).toBeInTheDocument();
-        });
+  test('should show error message when Load More button is clicked and axios throws an error', async () => {
+    // Wait for initial products to be rendered
+    await waitFor(() => {
+      expect(screen.getByTestId("product-1")).toBeInTheDocument();
+      expect(screen.getByTestId("product-2")).toBeInTheDocument();
     });
 
+    // Simulate the "Load More" button click that triggers the error
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("btn-load-more"));
+    });
 
-//   it('should render products correctly', async () => {
-//     render(
-//       <MemoryRouter initialEntries={['/']}>
-//         <Routes>
-//           <Route path="/" element={<HomePage />} />
-//         </Routes>
-//       </MemoryRouter>
-//     );
+    // Wait for the error message to be displayed
+    await waitFor(() => {
+      expect(screen.getByTestId('product-section-error')).toBeInTheDocument(); // Error message should appear with this test ID
+    });
 
-//     // Wait for the products to be rendered
-//     await waitFor(() => {
-//       expect(screen.getByText('Product 1')).toBeInTheDocument();
-//       expect(screen.getByText('Product 2')).toBeInTheDocument();
-//     });
-//   });
+    expect(axios.get).toHaveBeenCalledTimes(3);
+  });
+});
 
-//   it('should load more products when Load More button is clicked', async () => {
-//     axios.get.mockResolvedValueOnce({
-//       data: {
-//         total: 5, // Simulate total of 5 products
-//         products: [
-//           { _id: '3', name: 'Product 3', price: 300, slug: 'product-3' },
-//           { _id: '4', name: 'Product 4', price: 400, slug: 'product-4' },
-//         ],
-//       },
-//     });
 
-//     render(
-//       <MemoryRouter initialEntries={['/']}>
-//         <Routes>
-//           <Route path="/" element={<HomePage />} />
-//         </Routes>
-//       </MemoryRouter>
-//     );
 
-//     // Wait for initial products
-//     await waitFor(() => {
-//       expect(screen.getByText('Product 1')).toBeInTheDocument();
-//       expect(screen.getByText('Product 2')).toBeInTheDocument();
-//     });
+describe('HomePage Checkbox Filter functionality', () => {
 
-//     // Click Load More button inside `act()`
-//     await act(async () => {
-//       fireEvent.click(screen.getByText('Loadmore'));
-//     });
+  beforeEach(() => {
+    jest.clearAllMocks();
 
-//     // Wait for more products to load and check if they are rendered
-//     await waitFor(() => {
-//       expect(axios.get).toHaveBeenCalledTimes(2); // Ensure axios is called again
-//       expect(screen.getByText('Product 3')).toBeInTheDocument();
-//       expect(screen.getByText('Product 4')).toBeInTheDocument();
-//     });
-//   });
+    // Mock axios response for the initial product load
+    axios.get.mockResolvedValueOnce({
+      data: {
+        products: [
+          { _id: '1', name: 'Product 1', price: 100, slug: 'product-1', description: 'product1' },
+          { _id: '2', name: 'Product 2', price: 200, slug: 'product-2', description: 'product2' },
+        ],
+      },
+    });
 
-//   it('should add product to the cart', async () => {
-//     const setCart = jest.fn(); // Mock setCart function
+    // Initial render of HomePage
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  });
 
-//     render(
-//       <MemoryRouter initialEntries={['/']}>
-//         <Routes>
-//           <Route path="/" element={<HomePage />} />
-//         </Routes>
-//       </MemoryRouter>
-//     );
+  test('should update checked state when checkbox is clicked', async () => {
+    // Wait for checkboxes to be rendered
+    await waitFor(() => {
+      expect(screen.getByTestId('category-1')).toBeInTheDocument();
+      expect(screen.getByTestId('category-2')).toBeInTheDocument();
+    });
 
-//     // Simulate clicking the ADD TO CART button for Product 1
-//     fireEvent.click(screen.getAllByText('ADD TO CART')[0]);
+    // Simulate checking Category 1
+    fireEvent.click(screen.getByTestId('category-1'));
+    
+    // Verify if setChecked was called with the correct updated state
+    await waitFor(() => {
+      expect(screen.getByTestId('category-1')).toBeChecked();  // Category 1 should be checked now
+    });
 
-//     // Ensure the cart is updated (calling setCart)
-//     expect(setCart).toHaveBeenCalledWith([{ _id: '1', name: 'Product 1', price: 100, slug: 'product-1' }]);
+    // Simulate checking Category 2
+    fireEvent.click(screen.getByTestId('category-2'));
+    
+    // Verify if setChecked was called with both Category 1 and Category 2
+    await waitFor(() => {
+      expect(screen.getByTestId('category-2')).toBeChecked();  // Category 2 should be checked now
+    });
 
-//     // Ensure toast success message is shown
-//     expect(require('react-hot-toast').toast.success).toHaveBeenCalledWith('Item Added to cart');
-//   });
+    // Simulate unchecking Category 1
+    fireEvent.click(screen.getByTestId('category-1'));
+    
+    // // Verify if setChecked was called with only Category 2
+    await waitFor(() => {
+      expect(screen.getByTestId('category-1')).not.toBeChecked();  // Category 1 should be unchecked now
+    });
+  });
 });

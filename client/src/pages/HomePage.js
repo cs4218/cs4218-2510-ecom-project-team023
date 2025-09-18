@@ -12,10 +12,10 @@ import useCategory from "../hooks/useCategory";
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const categories = useCategory();
   const [cart, setCart] = useCart();
   const [products, setProducts] = useState([]);
-  const categories = useCategory();
-  console.log(categories);
+  const [productError, setProductError] = useState(null);
   const [checked, setChecked] = useState([]);
   const [radio, setRadio] = useState([]);
   const [total, setTotal] = useState(0);
@@ -34,6 +34,7 @@ const HomePage = () => {
       setProducts(data.products);
     } catch (error) {
       setLoading(false);
+      setProductError(error);
       console.log(error);
     }
   };
@@ -56,11 +57,13 @@ const HomePage = () => {
       setProducts([...products, ...data?.products]);
     } catch (error) {
       console.log(error);
+      setProductError(error);
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // incorrect logic
     if (page === 1) return;
     loadMore();
   }, [page]);
@@ -74,10 +77,12 @@ const HomePage = () => {
     } else {
       all = all.filter((c) => c !== id);
     }
+    console.log(all);
     setChecked(all);
   };
 
   useEffect(() => {
+    // incorrect logic
     if (!checked.length || !radio.length) getAllProducts();
   }, [checked.length, radio.length]);
 
@@ -94,6 +99,7 @@ const HomePage = () => {
       });
       setProducts(data?.products);
     } catch (error) {
+      setProductError(error);
       console.log(error);
     }
   };
@@ -122,11 +128,11 @@ const HomePage = () => {
             ))}
           </div>
           {/* price filter */}
-          <h4 className="text-center mt-4" data-testId="price-filter">Filter By Price</h4>
-          <div className="d-flex flex-column">
+          <h4 className="text-center mt-4">Filter By Price</h4>
+          <div className="d-flex flex-column" data-testid="price-filter">
             <Radio.Group onChange={(e) => setRadio(e.target.value)}>
               {Prices?.map((p) => (
-                <div key={p._id} data-testId={`price-{p._id}`}>
+                <div key={p._id} data-testid={`price-${p._id}`}>
                   <Radio key={p._id} value={p.array}>{p.name}</Radio>
                 </div>
               ))}
@@ -144,8 +150,9 @@ const HomePage = () => {
         <div className="col-md-9 ">
           <h1 className="text-center">All Products</h1>
           <div className="d-flex flex-wrap">
-            {products?.map((p) => (
-              <div className="card m-2" key={p._id}>
+            {productError && <h3 data-testid="product-section-error">Error Fetching Products</h3>}
+            {productError === null && products?.map((p) => (
+              <div className="card m-2" key={p._id} data-testid={`product-${p._id}`}>
                 <img
                   src={`/api/v1/product/product-photo/${p._id}`}
                   className="card-img-top"
@@ -190,13 +197,14 @@ const HomePage = () => {
             ))}
           </div>
           <div className="m-2 p-3">
-            {products && products.length < total && (
+            {productError === null && products.length < total && (
               <button
                 className="btn loadmore"
                 onClick={(e) => {
                   e.preventDefault();
                   setPage(page + 1);
                 }}
+                data-testId="btn-load-more"
               >
                 {loading ? (
                   "Loading ..."
