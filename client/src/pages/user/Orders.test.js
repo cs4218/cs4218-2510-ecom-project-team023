@@ -1,7 +1,8 @@
 // Tests are written with the help of AI
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import "@testing-library/jest-dom/extend-expect";
+import { render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import axios from "axios";
 import Orders from "./Orders";
 
 // MOCKS
