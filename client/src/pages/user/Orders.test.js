@@ -594,6 +594,11 @@ describe("Orders Component - Unit Tests Only", () => {
 
       render(<Orders />);
 
+      // Wait for the table to appear
+      await waitFor(() => {
+        expect(screen.getByText("Processing")).toBeInTheDocument();
+      });
+
       // Check each header for correct capitalization
       expect(screen.getByRole('columnheader', { name: '#' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
