@@ -409,7 +409,7 @@ describe("Orders Component - Unit Tests Only", () => {
       const mockOrders = [
         {
           _id: "1",
-          status: "Test",
+          status: "Processing",
           buyer: { name: "Test" },
           createAt: "2023-01-01",
           payment: { success: true },
@@ -574,6 +574,33 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(container.querySelector(".row")).toBeInTheDocument();
       expect(container.querySelector(".col-md-3")).toBeInTheDocument();
       expect(container.querySelector(".col-md-9")).toBeInTheDocument();
+    });
+
+    
+    it('renders table headers with correct capitalization', async () => {
+      // UNIT TEST: Verifies that the table headers are displayed with the correct capitalization.
+      const mockOrders = [
+        {
+          _id: "order1",
+          status: "Processing",
+          buyer: { name: "Jane Doe" },
+          createAt: "2025-09-17T12:00:00.000Z",
+          payment: { success: true },
+          products: [{ _id: "prod1", name: "Product A", description: "Desc A", price: 100 }],
+        },
+      ];
+      axios.get.mockResolvedValueOnce({ data: mockOrders });
+      mockUseAuth.mockReturnValue([{ token: 'valid-token' }, jest.fn()]);
+
+      render(<Orders />);
+
+      // Check each header for correct capitalization
+      expect(screen.getByRole('columnheader', { name: '#' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Buyer' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Date' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Payment' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Quantity' })).toBeInTheDocument();
     });
   });
 });
