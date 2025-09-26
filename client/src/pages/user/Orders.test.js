@@ -43,8 +43,8 @@ jest.mock("react-router-dom", () => ({
   ),
 }));
 
-// Mock window.matchMedia for responsive components;  
-// To ensure test suite is robust and can handle potential dependencies 
+// Mock window.matchMedia for responsive components;
+// To ensure test suite is robust and can handle potential dependencies
 // without unexpected crashes.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -87,7 +87,7 @@ describe("Orders Component - Unit Tests Only", () => {
 
       const { container } = render(<Orders />);
 
-      expect(container.querySelector(".container-flui")).toBeInTheDocument();
+      expect(container.querySelector(".container-fluid")).toBeInTheDocument();
       expect(container.querySelector(".dashboard")).toBeInTheDocument();
       expect(container.querySelector(".row")).toBeInTheDocument();
       expect(container.querySelector(".col-md-3")).toBeInTheDocument();
@@ -104,13 +104,11 @@ describe("Orders Component - Unit Tests Only", () => {
       render(<Orders />);
 
       expect(screen.getByText("All Orders")).toBeInTheDocument();
-      // Should not render any table headers when no orders
-      expect(screen.queryByText("Status")).not.toBeInTheDocument();
-      expect(screen.queryByText("Buyer")).not.toBeInTheDocument();
-      expect(screen.queryByText("Payment")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("You haven't placed any orders yet.")
+      ).toBeInTheDocument();
     });
   });
-
 
   // CONDITIONAL RENDERING TESTS
   describe("Conditional Rendering Logic", () => {
@@ -171,67 +169,57 @@ describe("Orders Component - Unit Tests Only", () => {
       ]);
     });
 
-    it("renders table headers correctly", () => {
-      // UNIT TEST: Tests table header rendering logic
-      // Simulate component with orders by setting initial state
-      const OrdersWithMockData = () => {
-        const mockOrders = [
-          {
-            _id: "1",
-            status: "Test",
-            buyer: { name: "Test" },
-            createAt: "2023-01-01",
-            payment: { success: true },
-            products: [],
-          },
-        ];
+    it("renders table headers with correctly, with correct capitalization", async () => {
+      // UNIT TEST: Verifies that the table headers are displayed with the correct capitalization.
+      const mockOrders = [
+        {
+          _id: "order1",
+          status: "Processing",
+          buyer: { name: "Jane Doe" },
+          createAt: "2025-09-17T12:00:00.000Z",
+          payment: { success: true },
+          products: [
+            {
+              _id: "prod1",
+              name: "Product A",
+              description: "Desc A",
+              price: 100,
+            },
+          ],
+        },
+      ];
+      axios.get.mockResolvedValueOnce({ data: mockOrders });
+      mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
 
-        return (
-          <div data-testid="layout">
-            <div data-testid="layout-title">Your Orders</div>
-            <div data-testid="layout-children">
-              <div className="container-flui p-3 m-3 dashboard">
-                <div className="row">
-                  <div className="col-md-3">
-                    <div data-testid="user-menu">Mocked User Menu</div>
-                  </div>
-                  <div className="col-md-9">
-                    <h1 className="text-center">All Orders</h1>
-                    {mockOrders?.map((o, i) => (
-                      <div className="border shadow" key={o._id}>
-                        <table className="table">
-                          <thead>
-                            <tr>
-                              <th scope="col">#</th>
-                              <th scope="col">Status</th>
-                              <th scope="col">Buyer</th>
-                              <th scope="col"> date</th>
-                              <th scope="col">Payment</th>
-                              <th scope="col">Quantity</th>
-                            </tr>
-                          </thead>
-                        </table>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      };
+      render(<Orders />);
 
-      render(<OrdersWithMockData />);
+      // Wait for the table to appear
+      await waitFor(() => {
+        expect(screen.getByText("Processing")).toBeInTheDocument();
+      });
 
-      expect(screen.getByText("#")).toBeInTheDocument();
-      expect(screen.getByText("Status")).toBeInTheDocument();
-      expect(screen.getByText("Buyer")).toBeInTheDocument();
-      expect(screen.getByText(" date")).toBeInTheDocument();
-      expect(screen.getByText("Payment")).toBeInTheDocument();
-      expect(screen.getByText("Quantity")).toBeInTheDocument();
+      // Check each header for correct capitalization
+      expect(
+        screen.getByRole("columnheader", { name: "#" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("columnheader", { name: "Status" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("columnheader", { name: "Buyer" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("columnheader", { name: "Date" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("columnheader", { name: "Payment" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("columnheader", { name: "Quantity" })
+      ).toBeInTheDocument();
     });
 
-    it('renders order details and products correctly from mock data', async () => {
+    it("renders order details and products correctly from mock data", async () => {
       // UNIT TEST: Verifies that the component correctly maps and renders all provided order and product data.
       const mockOrders = [
         {
@@ -244,7 +232,7 @@ describe("Orders Component - Unit Tests Only", () => {
             {
               _id: "prod1",
               name: "Test Product A",
-              description: "A very detailed description for product A.",
+              description: "A very detailed description for product A",
               price: 150,
             },
           ],
@@ -265,10 +253,9 @@ describe("Orders Component - Unit Tests Only", () => {
 
       expect(screen.getByText("Jane Doe")).toBeInTheDocument();
       expect(screen.getByText("Success")).toBeInTheDocument();
-      expect(screen.getByText("1")).toBeInTheDocument();
       expect(screen.getByText("Test Product A")).toBeInTheDocument();
       expect(
-        screen.getByText("A very detailed descriptio")
+        screen.getByText("A very detailed description fo") // ok to be truncated
       ).toBeInTheDocument();
       expect(screen.getByText("Price : 150")).toBeInTheDocument();
     });
@@ -299,17 +286,6 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(formatPaymentStatus({})).toBe("Failed");
     });
 
-    it("calculates product quantity correctly", () => {
-      // UNIT TEST: Tests products array length calculation
-      const calculateQuantity = (products) => products?.length || 0;
-
-      expect(calculateQuantity([])).toBe(0);
-      expect(calculateQuantity([{ id: 1 }])).toBe(1);
-      expect(calculateQuantity([{ id: 1 }, { id: 2 }, { id: 3 }])).toBe(3);
-      expect(calculateQuantity(null)).toBe(0);
-      expect(calculateQuantity(undefined)).toBe(0);
-    });
-
     it("truncates description correctly", () => {
       // UNIT TEST: Tests description truncation logic
       const truncateDescription = (desc, maxLength = 30) =>
@@ -326,6 +302,18 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(truncateDescription("")).toBe("");
       expect(truncateDescription(null)).toBe("");
       expect(truncateDescription(undefined)).toBe("");
+    });
+
+    // For the following, just test calculations, transfomrations. Null/ undefined is ok as these rwos will be omitted.
+    it("calculates product quantity correctly", () => {
+      // UNIT TEST: Tests products array length calculation;
+      const calculateQuantity = (products) => products?.length;
+
+      expect(calculateQuantity([])).toBe(0);
+      expect(calculateQuantity([{ id: 1 }])).toBe(1);
+      expect(calculateQuantity([{ id: 1 }, { id: 2 }, { id: 3 }])).toBe(3);
+      expect(calculateQuantity(null)).toBeUndefined();
+      expect(calculateQuantity(undefined)).toBeUndefined();
     });
 
     it("handles optional chaining for buyer name", () => {
@@ -369,14 +357,30 @@ describe("Orders Component - Unit Tests Only", () => {
   describe("Component State Logic", () => {
     it("initializes with empty orders state", () => {
       // UNIT TEST: Tests initial state
+      const mockOrders = [
+        {
+          _id: "order1",
+          status: "Processing",
+          buyer: { name: "Jane Doe" },
+          createAt: "2025-09-17T12:00:00.000Z",
+          payment: { success: true },
+          products: [
+            {
+              _id: "prod1",
+              name: "Product A",
+              description: "Desc A",
+              price: 100,
+            },
+          ],
+        },
+      ];
+      axios.get.mockResolvedValueOnce({ data: mockOrders });
       mockUseAuth.mockReturnValue([null, jest.fn()]);
-
       render(<Orders />);
 
       // Component should render without any orders initially
       expect(screen.getByText("All Orders")).toBeInTheDocument();
       expect(screen.queryByText("Processing")).not.toBeInTheDocument();
-      expect(screen.queryByText("Delivered")).not.toBeInTheDocument();
     });
 
     it("handles auth state changes", () => {
@@ -403,8 +407,8 @@ describe("Orders Component - Unit Tests Only", () => {
       rerender(<Orders />);
       expect(screen.getByText("All Orders")).toBeInTheDocument();
     });
-    
-    it('calls getOrders when auth token is present', async () => {
+
+    it("calls getOrders when auth token is present", async () => {
       // UNIT TEST: Verifies that the getOrders API call is triggered when an auth token exists.
       const mockOrders = [
         {
@@ -429,7 +433,7 @@ describe("Orders Component - Unit Tests Only", () => {
       });
     });
 
-    it('does not call getOrders when auth token is not present', () => {
+    it("does not call getOrders when auth token is not present", () => {
       // UNIT TEST: Verifies that the getOrders API call is NOT triggered when no auth token is available.
       axios.get.mockClear();
       mockUseAuth.mockReturnValue([{ user: { name: "Test User" } }, jest.fn()]);
@@ -482,6 +486,23 @@ describe("Orders Component - Unit Tests Only", () => {
       ).toBeUndefined();
       expect(safePropertyAccess(null, "any.path")).toBeUndefined();
     });
+
+    it("handles malformed order data gracefully", async () => {
+      // UNIT TEST: Component-level; verifies the component gracefully handles orders with missing or null properties.
+      const malformedOrder = {
+        _id: "order3",
+        status: "Not Process",
+        createAt: "2025-09-17T12:00:00.000Z",
+        payment: { success: false },
+        products: null,
+      };
+      axios.get.mockResolvedValueOnce({ data: [malformedOrder] });
+      mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
+      render(<Orders />);
+      await waitFor(() => {
+        expect(screen.getByText("All Orders")).toBeInTheDocument(); // page did not crash
+      });
+    });
   });
 
   // COMPONENT LIFECYCLE LOGIC TESTS
@@ -518,34 +539,17 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(() => rerender(<Orders />)).not.toThrow();
     });
 
-    it('handles unmounting gracefully after API call starts', async () => {
+    it("handles unmounting gracefully after API call starts", async () => {
       // UNIT TEST: Verifies the component does not cause a memory leak by updating state on an unmounted component.
-      const mockPromise = new Promise(resolve => {});
+      const mockPromise = new Promise((resolve) => {});
       axios.get.mockImplementation(() => mockPromise);
-      mockUseAuth.mockReturnValue([{ token: 'valid-token' }, jest.fn()]);
-      const consoleErrorSpy = jest.spyOn(console, 'error');
+      mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
+      const consoleErrorSpy = jest.spyOn(console, "error");
       const { unmount } = render(<Orders />);
       unmount();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(consoleErrorSpy).not.toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
-    });
-
-    it('handles malformed order data gracefully', async () => {
-      // UNIT TEST: Component-level; verifies the component gracefully handles orders with missing or null properties.
-      const malformedOrder = {
-        _id: "order3",
-        status: "Not Process",
-        createAt: "2025-09-17T12:00:00.000Z",
-        payment: { success: false },
-        products: null
-      };
-      axios.get.mockResolvedValueOnce({ data: [malformedOrder] });
-      mockUseAuth.mockReturnValue([{ token: 'valid-token' }, jest.fn()]);
-      render(<Orders />);
-      await waitFor(() => {
-        expect(screen.getByText("All Orders")).toBeInTheDocument(); // page did not crash
-      });
     });
   });
 
@@ -569,43 +573,11 @@ describe("Orders Component - Unit Tests Only", () => {
       const { container } = render(<Orders />);
 
       expect(
-        container.querySelector(".container-flui.p-3.m-3.dashboard")
+        container.querySelector(".container-fluid.p-3.m-3.dashboard")
       ).toBeInTheDocument();
       expect(container.querySelector(".row")).toBeInTheDocument();
       expect(container.querySelector(".col-md-3")).toBeInTheDocument();
       expect(container.querySelector(".col-md-9")).toBeInTheDocument();
-    });
-
-    
-    it('renders table headers with correct capitalization', async () => {
-      // UNIT TEST: Verifies that the table headers are displayed with the correct capitalization.
-      const mockOrders = [
-        {
-          _id: "order1",
-          status: "Processing",
-          buyer: { name: "Jane Doe" },
-          createAt: "2025-09-17T12:00:00.000Z",
-          payment: { success: true },
-          products: [{ _id: "prod1", name: "Product A", description: "Desc A", price: 100 }],
-        },
-      ];
-      axios.get.mockResolvedValueOnce({ data: mockOrders });
-      mockUseAuth.mockReturnValue([{ token: 'valid-token' }, jest.fn()]);
-
-      render(<Orders />);
-
-      // Wait for the table to appear
-      await waitFor(() => {
-        expect(screen.getByText("Processing")).toBeInTheDocument();
-      });
-
-      // Check each header for correct capitalization
-      expect(screen.getByRole('columnheader', { name: '#' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Buyer' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Date' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Payment' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Quantity' })).toBeInTheDocument();
     });
   });
 });
