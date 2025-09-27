@@ -30,7 +30,8 @@ export const registerController = async (req, res) => {
     const exisitingUser = await userModel.findOne({ email });
     //exisiting user
     if (exisitingUser) {
-      return res.status(200).send({
+      // 409 Conflict
+      return res.status(409).send({
         success: false,
         message: "User already registered, please login",
       });
