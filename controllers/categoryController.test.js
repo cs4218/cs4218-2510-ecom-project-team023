@@ -1,16 +1,11 @@
-// list of jest tests written by chatgpt categoryControlller, singleCategoryController
-import {
-  jest, describe, test, expect, beforeEach,
-} from "@jest/globals";
+// controllers/categoryController.test.js using of jest and mocks aided by chatgpt
 
-/* ---------- ESM-safe mocks ---------- */
-await jest.unstable_mockModule("slugify", () => ({
-  __esModule: true,
-  // simple slugifier for tests: lowercases & replaces spaces with '-'
-  default: (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, "-"),
-}));
+// ---------- Mocks ----------
+jest.mock("slugify", () => (s) =>
+  String(s ?? "").trim().toLowerCase().replace(/\s+/g, "-")
+);
 
-await jest.unstable_mockModule("../models/categoryModel.js", () => {
+jest.mock("../models/categoryModel.js", () => {
   const Model = Object.assign(jest.fn(), {
     findOne: jest.fn(),
     find: jest.fn(),
@@ -20,25 +15,25 @@ await jest.unstable_mockModule("../models/categoryModel.js", () => {
   Model.mockImplementation((doc = {}) => ({
     save: jest.fn().mockResolvedValue({ _id: "cat1", ...doc }),
   }));
-  return { __esModule: true, default: Model };
+  return Model;
 });
 
-/* ---------- Import SUT after mocks ---------- */
+const Category = require("../models/categoryModel.js");
+
 const {
   createCategoryController,
   updateCategoryController,
   categoryControlller,
   singleCategoryController,
   deleteCategoryCOntroller,
-} = await import("./categoryController.js");
-const { default: Category } = await import("../models/categoryModel.js");
+} = require("./categoryController.js");
 
-/* ---------- helpers ---------- */
+// ---------- helpers ----------
 const makeRes = () => {
   const res = {};
   res.status = jest.fn(() => res);
-  res.send   = jest.fn(() => res);
-  res.json   = jest.fn(() => res);
+  res.send = jest.fn(() => res);
+  res.json = jest.fn(() => res);
   return res;
 };
 
@@ -51,15 +46,15 @@ beforeEach(() => {
   Category.mockClear();
 });
 
-/* =========================================
-   createCategoryController
-   ========================================= */
+// =========================================
+// createCategoryController
+// =========================================
 describe("createCategoryController", () => {
   test.each([
     { name: undefined, label: "undefined name" },
-    { name: null,      label: "null name" },
-    { name: "",        label: "empty string name" },
-    { name: "   ",     label: "whitespace only" },
+    { name: null, label: "null name" },
+    { name: "", label: "empty string name" },
+    { name: "   ", label: "whitespace only" },
   ])("400 when name missing (%s)", async ({ name }) => {
     const res = makeRes();
     await createCategoryController({ body: { name } }, res);
@@ -69,7 +64,6 @@ describe("createCategoryController", () => {
   });
 
   test("409 duplicate after trim/case-normalize", async () => {
-    // We expect controller to check name === "Phones" after canonicalization
     Category.findOne.mockImplementation(async (q) => {
       if (q?.name === "Phones") return { _id: "exists" };
       return null;
@@ -82,14 +76,20 @@ describe("createCategoryController", () => {
     expect(Category).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Category already exists" })
+      expect.objectContaining({
+        success: false,
+        message: "Category already exists",
+      })
     );
   });
 
   test("201 creates when not duplicate (canonicalizes name + slug)", async () => {
     Category.findOne.mockResolvedValue(null);
     const res = makeRes();
-    await createCategoryController({ body: { name: "  Phones & Gadgets  " } }, res);
+    await createCategoryController(
+      { body: { name: "  Phones & Gadgets  " } },
+      res
+    );
     expect(Category).toHaveBeenCalledWith({
       name: "Phones & Gadgets",
       slug: "phones-&-gadgets",
@@ -128,9 +128,9 @@ describe("createCategoryController", () => {
   });
 });
 
-/* =========================================
-   updateCategoryController
-   ========================================= */
+// =========================================
+// updateCategoryController
+// =========================================
 describe("updateCategoryController", () => {
   test("400 when name missing", async () => {
     const res = makeRes();
@@ -143,9 +143,14 @@ describe("updateCategoryController", () => {
   test("404 when category not found", async () => {
     Category.findByIdAndUpdate.mockResolvedValue(null);
     const res = makeRes();
-    await updateCategoryController({ params: { id: "missing" }, body: { name: "New Name" } }, res);
+    await updateCategoryController(
+      { params: { id: "missing" }, body: { name: "New Name" } },
+      res
+    );
     expect(Category.findByIdAndUpdate).toHaveBeenCalledWith(
-      "missing", { name: "New Name", slug: "new-name" }, { new: true }
+      "missing",
+      { name: "New Name", slug: "new-name" },
+      { new: true }
     );
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.send).toHaveBeenCalledWith({
@@ -155,15 +160,27 @@ describe("updateCategoryController", () => {
   });
 
   test("200 updates and returns payload with 'message' key", async () => {
-    Category.findByIdAndUpdate.mockResolvedValue({ _id: "c1", name: "New Name", slug: "new-name" });
+    Category.findByIdAndUpdate.mockResolvedValue({
+      _id: "c1",
+      name: "New Name",
+      slug: "new-name",
+    });
     const res = makeRes();
-    await updateCategoryController({ params: { id: "c1" }, body: { name: "New Name" } }, res);
+    await updateCategoryController(
+      { params: { id: "c1" }, body: { name: "New Name" } },
+      res
+    );
     expect(Category.findByIdAndUpdate).toHaveBeenCalledWith(
-      "c1", { name: "New Name", slug: "new-name" }, { new: true }
+      "c1",
+      { name: "New Name", slug: "new-name" },
+      { new: true }
     );
     expect(res.status).toHaveBeenCalledWith(200);
     const payload = res.send.mock.calls[0][0];
-    expect(payload).toHaveProperty("message", "Category Updated Successfully");
+    expect(payload).toHaveProperty(
+      "message",
+      "Category Updated Successfully"
+    );
     expect(payload).toMatchObject({
       success: true,
       category: { _id: "c1", name: "New Name", slug: "new-name" },
@@ -173,17 +190,23 @@ describe("updateCategoryController", () => {
   test("500 when update throws", async () => {
     Category.findByIdAndUpdate.mockRejectedValue(new Error("update failed"));
     const res = makeRes();
-    await updateCategoryController({ params: { id: "c3" }, body: { name: "X" } }, res);
+    await updateCategoryController(
+      { params: { id: "c3" }, body: { name: "X" } },
+      res
+    );
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error while updating category" })
+      expect.objectContaining({
+        success: false,
+        message: "Error while updating category",
+      })
     );
   });
 });
 
-/* =========================================
-   categoryControlller (get all)
-   ========================================= */
+// =========================================
+// categoryControlller (get all)
+// =========================================
 describe("categoryControlller (get all)", () => {
   test("200 returns list", async () => {
     Category.find.mockResolvedValue([{ _id: "a" }, { _id: "b" }]);
@@ -206,14 +229,17 @@ describe("categoryControlller (get all)", () => {
     await categoryControlller({}, res);
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error while getting all categories" })
+      expect.objectContaining({
+        success: false,
+        message: "Error while getting all categories",
+      })
     );
   });
 });
 
-/* =========================================
-   singleCategoryController
-   ========================================= */
+// =========================================
+// singleCategoryController
+// =========================================
 describe("singleCategoryController", () => {
   test("200 returns single by slug", async () => {
     Category.findOne.mockResolvedValue({ _id: "p", slug: "phones" });
@@ -242,9 +268,9 @@ describe("singleCategoryController", () => {
   });
 });
 
-/* =========================================
-   deleteCategoryCOntroller
-   ========================================= */
+// =========================================
+// deleteCategoryCOntroller
+// =========================================
 describe("deleteCategoryCOntroller", () => {
   test("200 deletes by id", async () => {
     Category.findByIdAndDelete.mockResolvedValue({ _id: "gone" });

@@ -1,29 +1,21 @@
 /* list of jest tests written by chatgpt getProductController, getPhotoController, productFiltersController, Braintree tests*/
-import {
-  jest, describe, test, expect, beforeEach,
-} from "@jest/globals";
+const fs = require("fs");
+const slugify = require("slugify");
 
-/* ---------- ESM-safe mocks ---------- */
-await jest.unstable_mockModule("fs", () => {
-  const readFileSync = jest.fn();
-  return {
-    __esModule: true,
-    default: { readFileSync },
-    readFileSync,
-  };
-});
-
-await jest.unstable_mockModule("dotenv", () => ({
-  __esModule: true,
-  default: { config: jest.fn() },
+// ---------- Mocks ----------
+jest.mock("fs", () => ({
+  readFileSync: jest.fn(),
 }));
 
-await jest.unstable_mockModule("slugify", () => ({
-  __esModule: true,
-  default: (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, "-"),
+jest.mock("dotenv", () => ({
+  config: jest.fn(),
 }));
 
-await jest.unstable_mockModule("../models/productModel.js", () => {
+jest.mock("slugify", () => (s) =>
+  String(s ?? "").trim().toLowerCase().replace(/\s+/g, "-")
+);
+
+jest.mock("../models/productModel.js", () => {
   const Model = Object.assign(jest.fn(), {
     find: jest.fn(),
     findOne: jest.fn(),
@@ -31,50 +23,45 @@ await jest.unstable_mockModule("../models/productModel.js", () => {
     findByIdAndDelete: jest.fn(),
     findByIdAndUpdate: jest.fn(),
   });
-  // default instance (will be reset in beforeEach)
   Model.mockImplementation((doc = {}) => ({
     ...doc,
     photo: {},
     save: jest.fn().mockResolvedValue({ _id: "prod1", ...doc }),
   }));
-  return { __esModule: true, default: Model };
+  return Model;
 });
 
-await jest.unstable_mockModule("../models/categoryModel.js", () => {
+jest.mock("../models/categoryModel.js", () => {
   const Model = Object.assign(jest.fn(), { findOne: jest.fn() });
   Model.mockImplementation((doc = {}) => ({ ...doc }));
-  return { __esModule: true, default: Model };
+  return Model;
 });
 
-await jest.unstable_mockModule("../models/orderModel.js", () => {
+jest.mock("../models/orderModel.js", () => {
   const Model = Object.assign(jest.fn(), {});
   Model.mockImplementation((doc = {}) => ({
     ...doc,
     save: jest.fn().mockResolvedValue({ _id: "order1", ...doc }),
   }));
-  return { __esModule: true, default: Model };
+  return Model;
 });
 
-// Keeping a braintree mock; not used directly after we export getGateway
-await jest.unstable_mockModule("braintree", () => {
+jest.mock("braintree", () => {
   const BraintreeGateway = jest.fn(() => ({
     clientToken: { generate: jest.fn() },
     transaction: { sale: jest.fn() },
   }));
   return {
-    __esModule: true,
-    default: {
-      BraintreeGateway,
-      Environment: { Sandbox: "Sandbox" },
-    },
+    BraintreeGateway,
+    Environment: { Sandbox: "Sandbox" },
   };
 });
 
-/* ---------- Import SUT and mocked deps ---------- */
-const fs = (await import("fs")).default;
-const ProductModel = (await import("../models/productModel.js")).default;
-const CategoryModel = (await import("../models/categoryModel.js")).default;
-const OrderModel = (await import("../models/orderModel.js")).default;
+// ---------- Import SUT and mocked deps ----------
+const ProductModel = require("../models/productModel.js");
+const CategoryModel = require("../models/categoryModel.js");
+const OrderModel = require("../models/orderModel.js");
+const braintree = require("braintree");
 
 const {
   createProductController,
@@ -93,27 +80,43 @@ const {
   brainTreePaymentController,
   getGateway,
   btMocks,
-} = await import("./productController.js");
+} = require("./productController.js");
 
-/* ---------- helpers ---------- */
+// ---------- helpers ----------
 const makeRes = () => {
   const res = {};
   res.status = jest.fn(() => res);
-  res.send   = jest.fn(() => res);
-  res.json   = jest.fn(() => res);
-  res.set    = jest.fn(() => res);
+  res.send = jest.fn(() => res);
+  res.json = jest.fn(() => res);
+  res.set = jest.fn(() => res);
   return res;
 };
 
 const makeQueryChain = (result) => {
   const chain = {
     _calls: {},
-    populate: jest.fn(function (...args) { chain._calls.populate = args; return chain; }),
-    select:   jest.fn(function (...args) { chain._calls.select   = args; return chain; }),
-    limit:    jest.fn(function (...args) { chain._calls.limit    = args; return chain; }),
-    sort:     jest.fn(function (...args) { chain._calls.sort     = args; return chain; }),
-    skip:     jest.fn(function (...args) { chain._calls.skip     = args; return chain; }),
-    then: (onFulfilled, onRejected) => Promise.resolve(result).then(onFulfilled, onRejected),
+    populate: jest.fn(function (...args) {
+      chain._calls.populate = args;
+      return chain;
+    }),
+    select: jest.fn(function (...args) {
+      chain._calls.select = args;
+      return chain;
+    }),
+    limit: jest.fn(function (...args) {
+      chain._calls.limit = args;
+      return chain;
+    }),
+    sort: jest.fn(function (...args) {
+      chain._calls.sort = args;
+      return chain;
+    }),
+    skip: jest.fn(function (...args) {
+      chain._calls.skip = args;
+      return chain;
+    }),
+    then: (onFulfilled, onRejected) =>
+      Promise.resolve(result).then(onFulfilled, onRejected),
     catch: (onRejected) => Promise.resolve(result).catch(onRejected),
   };
   return chain;
