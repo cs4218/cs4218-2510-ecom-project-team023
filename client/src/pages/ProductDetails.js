@@ -3,11 +3,14 @@ import React, { useState, useEffect } from "react";
 import Layout from "./../components/Layout";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
+import { useCart } from "../context/cart";
+import toast from "react-hot-toast";
 import "../styles/ProductDetailsStyles.css";
 
 const ProductDetails = () => {
   const params = useParams();
   const navigate = useNavigate();
+  const [cart, setCart] = useCart();
 
   const [product, setProduct] = useState({});
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -46,12 +49,11 @@ const ProductDetails = () => {
         } else {
           setRelatedProducts([]);
         }
-      } catch (e) {
+      } catch {
         if (!ignore) {
           // Keep UI stable if anything fails
           setRelatedProducts([]);
         }
-        // optional: console.log(e);
       }
     })();
 
@@ -60,6 +62,14 @@ const ProductDetails = () => {
       ignore = true;
     };
   }, [params?.slug]);
+
+  const handleAddToCart = () => {
+    if (!product?._id) return;
+    const next = [...cart, product];
+    setCart(next);
+    localStorage.setItem("cart", JSON.stringify(next));
+    toast.success("Item Added to cart");
+  };
 
   return (
     <Layout data-testid="layout">
@@ -91,7 +101,9 @@ const ProductDetails = () => {
                   : ""}
               </h6>
               <h6>Category : {product?.category?.name ?? ""}</h6>
-              <button className="btn btn-secondary ms-1">ADD TO CART</button>
+              <button className="btn btn-secondary ms-1" onClick={handleAddToCart}>
+                ADD TO CART
+              </button>
             </>
           ) : (
             // render nothing or a lightweight placeholder while loading
