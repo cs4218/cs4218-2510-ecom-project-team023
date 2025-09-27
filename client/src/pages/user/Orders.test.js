@@ -1,12 +1,11 @@
 // Tests are written with the help of AI
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import axios from "axios";
 import Orders from "./Orders";
 
 // MOCKS
-
 jest.mock("axios");
 
 jest.mock("moment", () => {
@@ -61,8 +60,13 @@ Object.defineProperty(window, "matchMedia", {
 describe("Orders Component - Unit Tests Only", () => {
   const mockUseAuth = require("../../context/auth").useAuth;
 
-  beforeEach(() => {
+  afterEach(() => {
+    cleanup();
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    axios.get.mockResolvedValue({ data: [] });
   });
 
   // RENDERING LOGIC TESTS
@@ -82,7 +86,7 @@ describe("Orders Component - Unit Tests Only", () => {
     });
 
     it("renders dashboard container structure", () => {
-      // UNIT TEST: Tests CSS class structure and layout
+      // UNIT TEST: Tests layout
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
       const { container } = render(<Orders />);
@@ -94,8 +98,9 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(container.querySelector(".col-md-9")).toBeInTheDocument();
     });
 
-    it("renders empty state when no orders", () => {
+    it("renders empty state when no orders", async () => {
       // UNIT TEST: Tests rendering with empty orders array
+      axios.get.mockResolvedValue({ data: [] });
       mockUseAuth.mockReturnValue([
         { token: "test-token", user: { name: "Test" } },
         jest.fn(),
@@ -103,10 +108,11 @@ describe("Orders Component - Unit Tests Only", () => {
 
       render(<Orders />);
 
-      expect(screen.getByText("All Orders")).toBeInTheDocument();
-      expect(
-        screen.queryByText("You haven't placed any orders yet.")
-      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(
+          screen.getByText("You haven't placed any orders yet.")
+        ).toBeInTheDocument();
+      });
     });
   });
 
@@ -120,11 +126,10 @@ describe("Orders Component - Unit Tests Only", () => {
       render(<Orders />);
 
       expect(screen.getByText("All Orders")).toBeInTheDocument();
-      // Component should render even without token
       expect(screen.getByTestId("layout")).toBeInTheDocument();
     });
 
-    it("renders with auth token present", () => {
+    it("renders with auth token present", async () => {
       // UNIT TEST: Tests rendering when auth token exists
       const mockSetAuth = jest.fn();
       mockUseAuth.mockReturnValue([
@@ -133,7 +138,9 @@ describe("Orders Component - Unit Tests Only", () => {
       ]);
 
       render(<Orders />);
-
+      await waitFor(() => {
+        expect(axios.get).toHaveBeenCalledTimes(1);
+      });
       expect(screen.getByText("All Orders")).toBeInTheDocument();
       expect(screen.getByTestId("user-menu")).toBeInTheDocument();
     });
@@ -141,21 +148,15 @@ describe("Orders Component - Unit Tests Only", () => {
     it("handles null auth state gracefully", () => {
       // UNIT TEST: Tests null safety in component
       mockUseAuth.mockReturnValue([null, jest.fn()]);
-
       render(<Orders />);
-
       expect(screen.getByText("All Orders")).toBeInTheDocument();
-      // Should not crash with null auth
     });
 
     it("handles undefined auth state gracefully", () => {
       // UNIT TEST: Tests undefined safety in component
       mockUseAuth.mockReturnValue([undefined, jest.fn()]);
-
       render(<Orders />);
-
       expect(screen.getByText("All Orders")).toBeInTheDocument();
-      // Should not crash with undefined auth
     });
   });
 
@@ -194,28 +195,25 @@ describe("Orders Component - Unit Tests Only", () => {
       render(<Orders />);
 
       await waitFor(() => {
-        expect(screen.getByText("Processing")).toBeInTheDocument();
+        expect(
+          screen.getByRole("columnheader", { name: "#" })
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("columnheader", { name: "Status" })
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("columnheader", { name: "Buyer" })
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("columnheader", { name: "Date" })
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("columnheader", { name: "Payment" })
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("columnheader", { name: "Quantity" })
+        ).toBeInTheDocument();
       });
-
-      // Check each header for correct capitalization
-      expect(
-        screen.getByRole("columnheader", { name: "#" })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("columnheader", { name: "Status" })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("columnheader", { name: "Buyer" })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("columnheader", { name: "Date" })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("columnheader", { name: "Payment" })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("columnheader", { name: "Quantity" })
-      ).toBeInTheDocument();
     });
 
     it("renders order details and products correctly from mock data", async () => {
@@ -248,15 +246,14 @@ describe("Orders Component - Unit Tests Only", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Processing")).toBeInTheDocument();
+        expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+        expect(screen.getByText("Success")).toBeInTheDocument();
+        expect(screen.getByText("Test Product A")).toBeInTheDocument();
+        expect(
+          screen.getByText("A very detailed description fo") // ok to be truncated
+        ).toBeInTheDocument();
+        expect(screen.getByText("Price : 150")).toBeInTheDocument();
       });
-
-      expect(screen.getByText("Jane Doe")).toBeInTheDocument();
-      expect(screen.getByText("Success")).toBeInTheDocument();
-      expect(screen.getByText("Test Product A")).toBeInTheDocument();
-      expect(
-        screen.getByText("A very detailed description fo") // ok to be truncated
-      ).toBeInTheDocument();
-      expect(screen.getByText("Price : 150")).toBeInTheDocument();
     });
 
     it("should filter out and not render orders with missing core properties", async () => {
@@ -371,7 +368,7 @@ describe("Orders Component - Unit Tests Only", () => {
         payment: { success: true },
       };
       const fakeProduct = {
-        _id: "prod1",
+        _id: "prod",
         name: "Product A",
         description: "Desc A",
         price: 100,
@@ -385,11 +382,12 @@ describe("Orders Component - Unit Tests Only", () => {
       });
 
       it("should display quantity 3 for multiple products in array (Upper Boundary)", async () => {
-        axios.get.mockResolvedValue({
-          data: [
-            { ...baseOrder, products: [fakeProduct, fakeProduct, fakeProduct] },
-          ],
-        });
+        const products = [
+          { ...fakeProduct, _id: "prod1" },
+          { ...fakeProduct, _id: "prod2" },
+          { ...fakeProduct, _id: "prod3" },
+        ];
+        axios.get.mockResolvedValue({ data: [{ ...baseOrder, products }] });
         render(<Orders />);
         const quantityCell = await screen.findByRole("cell", { name: 3 });
         expect(quantityCell).toBeInTheDocument();
@@ -519,29 +517,25 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(screen.queryByText("Processing")).not.toBeInTheDocument();
     });
 
-    it("handles auth state changes", () => {
+    it("handles auth state changes", async () => {
       // UNIT TEST: Tests component behavior with different auth states
       const mockSetAuth = jest.fn();
 
-      // Test with no auth
-      const { rerender } = render(<Orders />);
       mockUseAuth.mockReturnValue([null, mockSetAuth]);
+      const { rerender } = render(<Orders />);
+      expect(axios.get).not.toHaveBeenCalled(); // Assert only for initial state -  Verify no API call is made initially
 
-      rerender(<Orders />);
-      expect(screen.getByText("All Orders")).toBeInTheDocument();
-
-      // Test with auth but no token
-      mockUseAuth.mockReturnValue([{ user: { name: "Test" } }, mockSetAuth]);
-      rerender(<Orders />);
-      expect(screen.getByText("All Orders")).toBeInTheDocument();
-
-      // Test with full auth
+      // Act: Rerender with a token, which triggers the useEffect
       mockUseAuth.mockReturnValue([
         { token: "test-token", user: { name: "Test" } },
         mockSetAuth,
       ]);
       rerender(<Orders />);
-      expect(screen.getByText("All Orders")).toBeInTheDocument();
+
+      // Target assertion
+      await waitFor(() => {
+        expect(axios.get).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("calls getOrders when auth token is present", async () => {
@@ -678,22 +672,6 @@ describe("Orders Component - Unit Tests Only", () => {
       const { unmount } = render(<Orders />);
 
       expect(() => unmount()).not.toThrow();
-    });
-
-    it("re-renders with new props without errors", () => {
-      // UNIT TEST: Tests re-rendering stability
-      const mockSetAuth = jest.fn();
-      mockUseAuth.mockReturnValue([null, mockSetAuth]);
-
-      const { rerender } = render(<Orders />);
-
-      // Change auth state and re-render
-      mockUseAuth.mockReturnValue([
-        { token: "new-token", user: { name: "New User" } },
-        mockSetAuth,
-      ]);
-
-      expect(() => rerender(<Orders />)).not.toThrow();
     });
 
     it("handles unmounting gracefully after API call starts", async () => {
