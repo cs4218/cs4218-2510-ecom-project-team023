@@ -22,6 +22,11 @@ jest.mock('../../context/search', () => ({
     useSearch: jest.fn(() => [{ keyword: '' }, jest.fn()]) // Mock useSearch hook to return null state and a mock function
   }));  
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  axios.get.mockResolvedValue({ data: { success: true, categories: [] } });
+});
+
   Object.defineProperty(window, 'localStorage', {
     value: {
       setItem: jest.fn(),
