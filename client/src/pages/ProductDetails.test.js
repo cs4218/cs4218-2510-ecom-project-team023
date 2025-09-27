@@ -1,7 +1,8 @@
-// client/src/pages/ProductDetails.regression.test.jsx
-// list of jest tests written by chatgpt Regression 2 and 4
+// client/src/pages/ProductDetails.test.js
+// list of jest tests written by chatgpt 2 and 4
+
 import React from "react";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
 /* ---------- Mock Layout & CSS ---------- */
@@ -31,6 +32,13 @@ jest.mock("react-router-dom", () => {
   };
 });
 
+/* ---------- Mock useCart (IMPORTANT: name starts with 'mock') ---------- */
+const mockSetCart = jest.fn();
+jest.mock("../context/cart", () => ({
+  __esModule: true,
+  useCart: () => [[], mockSetCart], // tuple shape like the real hook
+}));
+
 /* ---------- Import after mocks ---------- */
 import ProductDetails from "./ProductDetails";
 
@@ -54,15 +62,10 @@ const related = (overrides = {}) => ({
   ...overrides,
 });
 
-const deferred = () => {
-  let resolve, reject;
-  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
-  return { promise, resolve, reject };
-};
-
 beforeEach(() => {
   jest.clearAllMocks();
   mockNavigate.mockReset();
+  mockSetCart.mockReset();
   mockSlug = "macbook-pro";
 });
 
@@ -72,7 +75,9 @@ beforeEach(() => {
 test("loads product and related products; renders details", async () => {
   axios.get
     .mockResolvedValueOnce({ data: { product: product() } }) // get-product/:slug
-    .mockResolvedValueOnce({ data: { products: [related(), related({ _id: "r2", name: "Dock" })] } }); // related
+    .mockResolvedValueOnce({
+      data: { products: [related(), related({ _id: "r2", name: "Dock" })] },
+    }); // related
 
   render(<ProductDetails />);
 
@@ -87,49 +92,55 @@ test("loads product and related products; renders details", async () => {
   expect(screen.getByText("Dock")).toBeInTheDocument();
 
   // Endpoints called correctly
-  expect(axios.get).toHaveBeenNthCalledWith(1, "/api/v1/product/get-product/macbook-pro");
-  expect(axios.get).toHaveBeenNthCalledWith(2, "/api/v1/product/related-product/p-main/cat-1");
+  expect(axios.get).toHaveBeenNthCalledWith(
+    1,
+    "/api/v1/product/get-product/macbook-pro"
+  );
+  expect(axios.get).toHaveBeenNthCalledWith(
+    2,
+    "/api/v1/product/related-product/p-main/cat-1"
+  );
 });
 
 /* ============================================================================
    REGRESSION 1: related product WITHOUT price should not crash
-   - Current code calls p.price.toLocaleString(...) and throws when price is undefined
-   - After fix: render a fallback (e.g., '—') or skip price
    ========================================================================== */
 test("does not crash when a related product has undefined price (renders fallback)", async () => {
   axios.get
     .mockResolvedValueOnce({ data: { product: product() } })
-    .mockResolvedValueOnce({ data: { products: [related({ price: undefined })] } });
+    .mockResolvedValueOnce({
+      data: { products: [related({ price: undefined })] },
+    });
 
   render(<ProductDetails />);
 
+  // Renders name fine even if price is undefined
   expect(await screen.findByText("Laptop Sleeve")).toBeInTheDocument();
-
 });
 
 /* ============================================================================
    REGRESSION 2: related product WITHOUT description should not crash
-   - Current code calls p.description.substring(0, 60) and throws when undefined
-   - After fix: use (p.description ?? "").substring(...)
    ========================================================================== */
 test("does not crash when a related product has undefined description (renders with fallback)", async () => {
   axios.get
     .mockResolvedValueOnce({ data: { product: product() } })
-    .mockResolvedValueOnce({ data: { products: [related({ description: undefined })] } });
+    .mockResolvedValueOnce({
+      data: { products: [related({ description: undefined })] },
+    });
 
   render(<ProductDetails />);
 
+  // Still renders the card
   expect(await screen.findByText("Laptop Sleeve")).toBeInTheDocument();
 });
 
 /* ============================================================================
-   REGRESSION 3 (brittle call): product returned without category should not
-   attempt to access category._id (and should not crash)
-   - Current code reads data.product.category._id directly; it's inside try/catch so
-     it won't crash the app, but it's brittle. We assert no second call happens.
+   REGRESSION 3: product returned without category should not fetch related
    ========================================================================== */
 test("if product has no category, it should not try to fetch related (no second axios call)", async () => {
-  axios.get.mockResolvedValueOnce({ data: { product: product({ category: undefined }) } });
+  axios.get.mockResolvedValueOnce({
+    data: { product: product({ category: undefined }) },
+  });
 
   render(<ProductDetails />);
 
@@ -140,21 +151,23 @@ test("if product has no category, it should not try to fetch related (no second 
   expect(axios.get).toHaveBeenCalledTimes(1);
 
   // "No Similar Products found" should show (relatedProducts remains [])
-  expect(screen.getByText(/No Similar Products found/i)).toBeInTheDocument();
+  expect(
+    screen.getByText(/No Similar Products found/i)
+  ).toBeInTheDocument();
 });
 
 /* ============================================================================
    REGRESSION 4 (optional): related price non-numeric should not crash
-   - If backend returns a string price, toLocaleString on a string is legal but not currency-formatted.
-     You may choose to coerce or show a fallback; keep this as a safety net if you decide to guard.
    ========================================================================== */
 test("non-numeric related price does not break rendering (optional guard)", async () => {
   axios.get
     .mockResolvedValueOnce({ data: { product: product() } })
-    .mockResolvedValueOnce({ data: { products: [related({ price: "not-a-number" })] } });
+    .mockResolvedValueOnce({
+      data: { products: [related({ price: "not-a-number" })] },
+    });
 
   render(<ProductDetails />);
 
-  // Should still render name; you can choose to show '—' for non-numeric in your fix.
+  // Should still render name; you may show '—' for non-numeric in the component
   expect(await screen.findByText("Laptop Sleeve")).toBeInTheDocument();
 });

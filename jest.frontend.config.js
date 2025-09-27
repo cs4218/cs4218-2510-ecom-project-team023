@@ -19,12 +19,12 @@ export default {
   // ignore all node_modules except styleMock (needed for css imports)
   transformIgnorePatterns: ["/node_modules/(?!(styleMock\\.js)$)"],
 
-  // only run these tests
-  testMatch: ["<rootDir>/client/src/pages/**/*.test.{js,jsx}", "<rootDir>/client/src/hooks/**/*.test.{js,jsx}"],
+   // run all test files ending with .test.js or .test.jsx or .test.ts/tsx inside client/src
+  testMatch: ["<rootDir>/client/src/!(_*)/**/*.test.[jt]s?(x)"],
 
   // jest code coverage
   collectCoverage: true,
-  collectCoverageFrom: ["client/src/pages/**/*.{js,jsx}", "!client/src/pages/**/*.test.{js,jsx}"],
+  ccollectCoverageFrom: ["client/src/!(_*)/**", "!client/src/**/*.test.js"],
   coverageThreshold: {
     global: {
       lines: 100,
