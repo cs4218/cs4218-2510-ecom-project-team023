@@ -193,7 +193,6 @@ describe("Orders Component - Unit Tests Only", () => {
 
       render(<Orders />);
 
-      // Wait for the table to appear
       await waitFor(() => {
         expect(screen.getByText("Processing")).toBeInTheDocument();
       });
@@ -258,6 +257,143 @@ describe("Orders Component - Unit Tests Only", () => {
         screen.getByText("A very detailed description fo") // ok to be truncated
       ).toBeInTheDocument();
       expect(screen.getByText("Price : 150")).toBeInTheDocument();
+    });
+
+    it("should filter out and not render orders with missing core properties", async () => {
+      // UNIT TEST: Orders data integrity (.filter() logic) for proper handling of malformed data to prevent crashes.
+      const mockOrders = [
+        {
+          // Valid order
+          _id: "order1",
+          status: "Shipped",
+          buyer: { name: "Alice" },
+          payment: { success: true },
+          products: [
+            {
+              _id: "prod1",
+              name: "Product A",
+              description: "Desc A",
+              price: 10,
+            },
+          ],
+        },
+        {
+          _id: "order2",
+          status: null,
+          buyer: { name: "Bob" },
+          payment: { success: true },
+          products: [],
+        }, // Invalid: null status
+        {
+          _id: "order3",
+          status: "Processing",
+          buyer: null,
+          payment: { success: true },
+          products: [],
+        }, // Invalid: null buyer
+        null, // Invalid: null order object
+        {
+          // Valid order
+          _id: "order4",
+          status: "Processing",
+          buyer: { name: "Charlie" },
+          payment: { success: false },
+          products: [
+            {
+              _id: "prod2",
+              name: "Product B",
+              description: "Desc B",
+              price: 20,
+            },
+          ],
+        },
+      ];
+
+      axios.get.mockResolvedValue({ data: mockOrders });
+      render(<Orders />);
+
+      await waitFor(() => {
+        // Assert that only valid orders are rendered
+        expect(screen.getByText("Alice")).toBeInTheDocument();
+        expect(screen.getByText("Charlie")).toBeInTheDocument();
+
+        // Assert that invalid orders are not rendered
+        expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+        expect(screen.queryByRole("row", { name: /order2/i })).toBeNull();
+        expect(screen.queryByRole("row", { name: /order3/i })).toBeNull();
+      });
+    });
+
+    // Partition: Payment Status
+    describe("Payment Status Display", () => {
+      const baseOrder = {
+        _id: "order1",
+        status: "Processing",
+        buyer: { name: "Test Buyer" },
+        products: [],
+      };
+
+      it("should display 'Success' for payment.success = true", async () => {
+        axios.get.mockResolvedValue({
+          data: [{ ...baseOrder, payment: { success: true } }],
+        });
+        render(<Orders />);
+        await waitFor(() =>
+          expect(screen.getByText("Success")).toBeInTheDocument()
+        );
+      });
+
+      it("should display 'Failed' for payment.success = false", async () => {
+        axios.get.mockResolvedValue({
+          data: [{ ...baseOrder, payment: { success: false } }],
+        });
+        render(<Orders />);
+        await waitFor(() =>
+          expect(screen.getByText("Failed")).toBeInTheDocument()
+        );
+      });
+
+      it("should display 'Failed' when payment object is missing the success property", async () => {
+        axios.get.mockResolvedValue({ data: [{ ...baseOrder, payment: {} }] });
+        render(<Orders />);
+        await waitFor(() =>
+          expect(screen.getByText("Failed")).toBeInTheDocument()
+        );
+      });
+    });
+
+    // Partition: Product Quantity (Boundary Value Analysis)
+    describe("Product Quantity Display", () => {
+      const baseOrder = {
+        _id: "order1",
+        status: "Processing",
+        buyer: { name: "Test Buyer" },
+        payment: { success: true },
+      };
+      const fakeProduct = {
+        _id: "prod1",
+        name: "Product A",
+        description: "Desc A",
+        price: 100,
+      };
+
+      it("should display quantity 0 for an empty products array (Lower Boundary)", async () => {
+        axios.get.mockResolvedValue({ data: [{ ...baseOrder, products: [] }] });
+        render(<Orders />);
+        const quantityCell = await screen.findByRole("cell", { name: /0/i });
+        expect(quantityCell).toBeInTheDocument();
+      });
+
+      it("should display quantity 3 for multiple products in array (Upper Boundary)", async () => {
+        axios.get.mockResolvedValue({
+          data: [
+            { ...baseOrder, products: [fakeProduct, fakeProduct, fakeProduct] },
+          ],
+        });
+        render(<Orders />);
+        const quantityCell = await screen.findByRole("cell", { name: 3 });
+        expect(quantityCell).toBeInTheDocument();
+      });
     });
   });
 
@@ -503,6 +639,27 @@ describe("Orders Component - Unit Tests Only", () => {
         expect(screen.getByText("All Orders")).toBeInTheDocument(); // page did not crash
       });
     });
+
+    it("should handle API errors gracefully and not display the order table", async () => {
+      // UNIT TEst: Mock a network error or a 500 server error
+      axios.get.mockRejectedValue(new Error("API Error"));
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      render(<Orders />);
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
+      });
+
+      // The table should not be present
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("You haven't placed any orders yet.") // An empty state message should be shown as a fallback
+      ).toBeInTheDocument();
+      consoleSpy.mockRestore();
+    });
   });
 
   // COMPONENT LIFECYCLE LOGIC TESTS
@@ -579,172 +736,5 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(container.querySelector(".col-md-3")).toBeInTheDocument();
       expect(container.querySelector(".col-md-9")).toBeInTheDocument();
     });
-  });
-});
-
-describe("Orders Component - Equivalence Partitioning and BVA Tests", () => {
-  const mockUseAuth = require("../../context/auth").useAuth;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    // All tests in this block assume a valid, authenticated user
-    mockUseAuth.mockReturnValue([
-      { token: "test-token", user: { name: "Test User" } },
-      jest.fn(),
-    ]);
-  });
-
-  // Test Partition: Orders data integrity (Testing the .filter() logic)
-  it("should filter out and not render orders with missing core properties", async () => {
-    const mockOrders = [
-      {
-        // Valid order
-        _id: "order1",
-        status: "Shipped",
-        buyer: { name: "Alice" },
-        payment: { success: true },
-        products: [
-          { _id: "prod1", name: "Product A", description: "Desc A", price: 10 },
-        ],
-      },
-      {
-        _id: "order2",
-        status: null,
-        buyer: { name: "Bob" },
-        payment: { success: true },
-        products: [],
-      }, // Invalid: null status
-      {
-        _id: "order3",
-        status: "Processing",
-        buyer: null,
-        payment: { success: true },
-        products: [],
-      }, // Invalid: null buyer
-      null, // Invalid: null order object
-      {
-        // Valid order
-        _id: "order4",
-        status: "Processing",
-        buyer: { name: "Charlie" },
-        payment: { success: false },
-        products: [
-          { _id: "prod2", name: "Product B", description: "Desc B", price: 20 },
-        ],
-      },
-    ];
-
-    axios.get.mockResolvedValue({ data: mockOrders });
-    render(<Orders />);
-
-    await waitFor(() => {
-      // Assert that only valid orders are rendered
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-      expect(screen.getByText("Charlie")).toBeInTheDocument();
-
-      // Assert that invalid orders are not rendered
-      expect(screen.queryByText("Bob")).not.toBeInTheDocument();
-      expect(screen.queryByRole("row", { name: /order2/i })).toBeNull();
-      expect(screen.queryByRole("row", { name: /order3/i })).toBeNull();
-    });
-  });
-
-  // Test Partition: Payment Status
-  describe("Payment Status Display", () => {
-    const baseOrder = {
-      _id: "order1",
-      status: "Processing",
-      buyer: { name: "Test Buyer" },
-      products: [],
-    };
-
-    it("should display 'Success' for payment.success = true", async () => {
-      axios.get.mockResolvedValue({
-        data: [{ ...baseOrder, payment: { success: true } }],
-      });
-      render(<Orders />);
-      await waitFor(() =>
-        expect(screen.getByText("Success")).toBeInTheDocument()
-      );
-    });
-
-    it("should display 'Failed' for payment.success = false", async () => {
-      axios.get.mockResolvedValue({
-        data: [{ ...baseOrder, payment: { success: false } }],
-      });
-      render(<Orders />);
-      await waitFor(() =>
-        expect(screen.getByText("Failed")).toBeInTheDocument()
-      );
-    });
-
-    // This tests the implicit 'else' case of the ternary operator
-    it("should display 'Failed' when payment object is missing the success property", async () => {
-      axios.get.mockResolvedValue({ data: [{ ...baseOrder, payment: {} }] });
-      render(<Orders />);
-      await waitFor(() =>
-        expect(screen.getByText("Failed")).toBeInTheDocument()
-      );
-    });
-  });
-
-  // Test Partition: Product Quantity (Boundary Value Analysis)
-  describe("Product Quantity Display", () => {
-    const baseOrder = {
-      _id: "order1",
-      status: "Processing",
-      buyer: { name: "Test Buyer" },
-      payment: { success: true },
-    };
-
-    const fakeProduct = {
-      _id: "prod1",
-      name: "Product A",
-      description: "Desc A",
-      price: 100,
-    };
-
-    it("should display quantity 0 for an empty products array (Lower Boundary)", async () => {
-      axios.get.mockResolvedValue({ data: [{ ...baseOrder, products: [] }] });
-      render(<Orders />);
-      const quantityCell = await screen.findByRole("cell", { name: /0/i });
-      expect(quantityCell).toBeInTheDocument();
-    });
-
-    it("should display quantity 3 for multiple products in array (Upper Boundary)", async () => {
-      axios.get.mockResolvedValue({
-        data: [
-          {
-            ...baseOrder,
-            products: [fakeProduct, fakeProduct, fakeProduct],
-          },
-        ],
-      });
-      render(<Orders />);
-      const quantityCell = await screen.findByRole("cell", { name: 3 });
-      expect(quantityCell).toBeInTheDocument();
-    });
-  });
-
-  // Test Partition: API Call Failures
-  it("should handle API errors gracefully and not display the order table", async () => {
-    // Mock a network error or a 500 server error
-    axios.get.mockRejectedValue(new Error("API Error"));
-    const consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
-
-    render(<Orders />);
-
-    await waitFor(() => {
-      // The error should be logged
-      expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
-    });
-
-    // The table should not be present
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    // An empty state message should be shown as a fallback
-    expect(
-      screen.getByText("You haven't placed any orders yet.")
-    ).toBeInTheDocument();
-    consoleSpy.mockRestore();
   });
 });

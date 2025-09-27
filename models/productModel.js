@@ -50,7 +50,4 @@ const productSchema = new mongoose.Schema(
   { timestamps: true } // <- createdAt/updatedAt
 );
 
-// Redundant but explicit unique index (keeps behavior even if `unique` on path is altered)
-productSchema.index({ slug: 1 }, { unique: true });
-
 export default mongoose.model("Product", productSchema);
