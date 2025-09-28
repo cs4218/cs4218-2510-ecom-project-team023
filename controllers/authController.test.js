@@ -219,7 +219,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(orderModel.find).toHaveBeenCalledWith({});
       expect(mockQuery.populate).toHaveBeenCalledWith("products", "-photo");
       expect(mockQuery.populate).toHaveBeenCalledWith("buyer", "name");
-      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: "-1" });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(res.json).toHaveBeenCalledWith(mockOrders);
     });
   });
