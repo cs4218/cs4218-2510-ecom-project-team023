@@ -9,10 +9,9 @@
     "client": "npm start --prefix ./client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "sonarqube": "sonarqube-scanner",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects backend",
-    "test:frontend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --selectProjects frontend"
+    "test": "npm run test:backend; npm run test:frontend",
+    "test:frontend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
+    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js"
   },
   "keywords": [],
   "author": "RP",
@@ -33,7 +32,7 @@
     "mongoose": "^8.1.2",
     "morgan": "^1.10.0",
     "nodemon": "^3.0.3",
-    "react-icons": "^5.0.1",
+    "react-icons": "^5.5.0",
     "slugify": "^1.6.6"
   },
   "devDependencies": {
