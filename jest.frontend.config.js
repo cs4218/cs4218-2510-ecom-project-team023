@@ -20,13 +20,11 @@ export default {
   transformIgnorePatterns: ["/node_modules/(?!(styleMock\\.js)$)"],
 
   // run all test files ending with .test.js or .test.jsx or .test.ts/tsx inside client/src
-  // testMatch: ["<rootDir>/client/src/!(_*)/**/*.test.[jt]s?(x)"],
-  // only run these tests
-  testMatch: ["<rootDir>/client/src/pages/user/*.test.js"],
+  testMatch: ["<rootDir>/client/src/!(_*)/**/*.test.[jt]s?(x)"],
 
   // jest code coverage
   collectCoverage: true,
-  ccollectCoverageFrom: ["client/src/!(_*)/**", "!client/src/**/*.test.js"],
+  collectCoverageFrom: ["client/src/!(_*)/**", "!client/src/**/*.test.js"],
   coverageThreshold: {
     global: {
       lines: 100,
