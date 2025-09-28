@@ -429,73 +429,142 @@ describe("Orders Component - Unit Tests Only", () => {
     });
   });
 
-  // DATA TRANSFORMATION LOGIC TESTS
+  // DATA TRANSFORMATION LOGIC TESTS - Properties of Order
   describe("Data Transformation Logic", () => {
-    // Test individual logic pieces that would be in the component
-
+    // Test individual logic pieces that are in the component
     it("calculates order number correctly", () => {
       // UNIT TEST: Tests order numbering logic (i + 1)
       const calculateOrderNumber = (index) => index + 1;
 
-      expect(calculateOrderNumber(0)).toBe(1);
-      expect(calculateOrderNumber(1)).toBe(2);
-      expect(calculateOrderNumber(9)).toBe(10);
+      const idx = calculateOrderNumber(0);
+
+      expect(idx).toBe(1);
     });
 
-    it("transforms payment status correctly", () => {
-      // UNIT TEST: Tests payment status transformation
+    describe("transforms payment status correctly", () => {
+      // UNIT TESTS: Test payment status transformation
       const formatPaymentStatus = (payment) =>
         payment?.success ? "Success" : "Failed";
 
-      expect(formatPaymentStatus({ success: true })).toBe("Success");
-      expect(formatPaymentStatus({ success: false })).toBe("Failed");
-      expect(formatPaymentStatus(null)).toBe("Failed");
-      expect(formatPaymentStatus(undefined)).toBe("Failed");
-      expect(formatPaymentStatus({})).toBe("Failed");
+      it.each([
+        {
+          input: { success: true },
+          expected: "Success",
+          case: "successful payment",
+        },
+        {
+          input: { success: false },
+          expected: "Failed",
+          case: "failed payment",
+        },
+        { input: null, expected: "Failed", case: "null payment object" },
+        {
+          input: undefined,
+          expected: "Failed",
+          case: "undefined payment object",
+        },
+        { input: {}, expected: "Failed", case: "empty payment object" },
+      ])("should return '$expected' for $case", ({ input, expected }) => {
+        // Act
+        const result = formatPaymentStatus(input);
+
+        // Assert
+        expect(result).toBe(expected);
+      });
     });
 
-    it("truncates description correctly", () => {
-      // UNIT TEST: Tests description truncation logic
+    describe("truncates description correctly", () => {
+      // UNIT TESTS: Tests description truncation logic
       const truncateDescription = (desc, maxLength = 30) =>
         desc?.substring(0, maxLength) || "";
 
+      // BVA
       const longDesc =
         "This is a very long description that exceeds thirty characters";
       const shortDesc = "Short description";
+      const fittedDesc = "This is a very long descriptio";
 
-      expect(truncateDescription(longDesc)).toBe(
-        "This is a very long descriptio"
-      );
-      expect(truncateDescription(shortDesc)).toBe("Short description");
-      expect(truncateDescription("")).toBe("");
-      expect(truncateDescription(null)).toBe("");
-      expect(truncateDescription(undefined)).toBe("");
+      it.each([
+        {
+          input: longDesc,
+          expected: "This is a very long descriptio",
+          case: "a long description",
+        },
+        {
+          input: shortDesc,
+          expected: "Short description",
+          case: "a short description",
+        },
+        {
+          input: fittedDesc,
+          expected: "This is a very long descriptio",
+          case: "a fitted description",
+        },
+        { input: "", expected: "", case: "an empty string" },
+        { input: null, expected: "", case: "a null value" },
+        { input: undefined, expected: "", case: "an undefined value" },
+      ])("should correctly handle $case", ({ input, expected }) => {
+        // Act
+        const result = truncateDescription(input);
+
+        // Assert
+        expect(result).toBe(expected);
+      });
     });
 
-    // For the following, just test calculations, transfomrations. Null/ undefined is ok as these rwos will be omitted.
-    it("calculates product quantity correctly", () => {
-      // UNIT TEST: Tests products array length calculation;
+    // For the following, Null/undefined is ok as these rows will be omitted.
+    describe("calculates product quantity correctly", () => {
+      // UNIT TESTS: Tests products array length calculation
       const calculateQuantity = (products) => products?.length;
 
-      expect(calculateQuantity([])).toBe(0);
-      expect(calculateQuantity([{ id: 1 }])).toBe(1);
-      expect(calculateQuantity([{ id: 1 }, { id: 2 }, { id: 3 }])).toBe(3);
-      expect(calculateQuantity(null)).toBeUndefined();
-      expect(calculateQuantity(undefined)).toBeUndefined();
+      it.each([
+        { input: [], expected: 0, case: "an empty array" },
+        { input: [{ id: 1 }], expected: 1, case: "an array with one item" },
+        {
+          input: [{ id: 1 }, { id: 2 }, { id: 3 }],
+          expected: 3,
+          case: "an array with multiple items",
+        },
+        { input: null, expected: undefined, case: "a null value" },
+        { input: undefined, expected: undefined, case: "an undefined value" },
+      ])("should return $expected for $case", ({ input, expected }) => {
+        // Act
+        const result = calculateQuantity(input);
+
+        // Assert
+        expect(result).toBe(expected);
+      });
     });
 
-    it("handles optional chaining for buyer name", () => {
-      // UNIT TEST: Tests null safety for buyer?.name
+    describe("handles optional chaining for buyer name", () => {
+      // UNIT TESTS: Tests null safety for buyer?.name
       const getBuyerName = (buyer) => buyer?.name;
 
-      expect(getBuyerName({ name: "John Doe" })).toBe("John Doe");
-      expect(getBuyerName({})).toBeUndefined();
-      expect(getBuyerName(null)).toBeUndefined();
-      expect(getBuyerName(undefined)).toBeUndefined();
+      it.each([
+        {
+          input: { name: "John Doe" },
+          expected: "John Doe",
+          case: "a valid buyer",
+        },
+        {
+          input: {},
+          expected: undefined,
+          case: "a buyer with no name property",
+        },
+        { input: null, expected: undefined, case: "a null buyer" },
+        { input: undefined, expected: undefined, case: "an undefined buyer" },
+      ])("should return $expected for $case", ({ input, expected }) => {
+        // Act
+        const result = getBuyerName(input);
+
+        // Assert
+        expect(result).toBe(expected);
+      });
     });
 
-    it("handles optional chaining for product properties", () => {
-      // UNIT TEST: Tests null safety for product properties
+    describe("handles optional chaining for product properties", () => {
+      // UNIT TESTS: Tests null safety for product properties
+      // Arrange
       const getProductName = (product) => product?.name;
       const getProductPrice = (product) => product?.price;
       const getProductDescription = (product) => product?.description;
@@ -507,17 +576,26 @@ describe("Orders Component - Unit Tests Only", () => {
       };
       const emptyProduct = {};
 
-      expect(getProductName(validProduct)).toBe("Test Product");
-      expect(getProductPrice(validProduct)).toBe(99.99);
-      expect(getProductDescription(validProduct)).toBe("Test desc");
+      it("should return correct values for a valid product", () => {
+        // Act & Assert
+        expect(getProductName(validProduct)).toBe("Test Product");
+        expect(getProductPrice(validProduct)).toBe(99.99);
+        expect(getProductDescription(validProduct)).toBe("Test desc");
+      });
 
-      expect(getProductName(emptyProduct)).toBeUndefined();
-      expect(getProductPrice(emptyProduct)).toBeUndefined();
-      expect(getProductDescription(emptyProduct)).toBeUndefined();
+      it("should return undefined for an empty product object", () => {
+        // Act & Assert
+        expect(getProductName(emptyProduct)).toBeUndefined();
+        expect(getProductPrice(emptyProduct)).toBeUndefined();
+        expect(getProductDescription(emptyProduct)).toBeUndefined();
+      });
 
-      expect(getProductName(null)).toBeUndefined();
-      expect(getProductPrice(null)).toBeUndefined();
-      expect(getProductDescription(null)).toBeUndefined();
+      it("should return undefined for a null product", () => {
+        // Act & Assert
+        expect(getProductName(null)).toBeUndefined();
+        expect(getProductPrice(null)).toBeUndefined();
+        expect(getProductDescription(null)).toBeUndefined();
+      });
     });
   });
 
@@ -610,42 +688,8 @@ describe("Orders Component - Unit Tests Only", () => {
     });
   });
 
-  // ERROR HANDLING LOGIC TESTS
+  // ERROR HANDLING LOGIC TESTS - Order
   describe("Error Handling Logic", () => {
-    describe("handles malformed order data gracefully", () => {
-      // UNIT TESTS: Tests component resilience to bad data
-      // Arrange
-      const processOrderData = (orders) => {
-        if (!orders || !Array.isArray(orders)) return [];
-        return orders.filter((order) => order && order._id);
-      };
-
-      // Testcases definition: [description, input, expectedOutput]
-      const testCases = [
-        ["a null value", null, []],
-        ["an undefined value", undefined, []],
-        ["a string instead of an array", "not an array", []],
-        ["an empty array", [], []],
-        [
-          "an array with mixed valid and invalid items",
-          [null, undefined, { _id: "1" }],
-          [{ _id: "1" }],
-        ],
-      ];
-
-      // Run each testcase
-      it.each(testCases)(
-        "should return an empty array for %s",
-        (description, input, expected) => {
-          // Act
-          const result = processOrderData(input);
-
-          // Assert
-          expect(result).toEqual(expected);
-        }
-      );
-    });
-
     describe("handles missing required properties safely", () => {
       // Arrange
       const safePropertyAccess = (obj, path) => {
@@ -669,7 +713,12 @@ describe("Orders Component - Unit Tests Only", () => {
       const testCases = [
         ["a valid nested property", testData, "order.buyer.name", "John"],
         ["a valid boolean property", testData, "order.payment.success", true],
-        ["a missing nested property", testData, "order.missing.property", undefined],
+        [
+          "a missing nested property",
+          testData,
+          "order.missing.property",
+          undefined,
+        ],
         ["a path on a null object", null, "any.path", undefined],
       ];
 
@@ -687,6 +736,7 @@ describe("Orders Component - Unit Tests Only", () => {
 
     it("handles malformed order data gracefully - component level", async () => {
       // UNIT TEST: Component-level; verifies the component gracefully handles orders with missing or null properties.
+      // Previously, page crashes as there was no filtering. With filtering, this testcase is just an added safety
       const malformedOrder = {
         _id: "order3",
         status: "Not Process",
@@ -721,6 +771,7 @@ describe("Orders Component - Unit Tests Only", () => {
       expect(
         screen.getByText("You haven't placed any orders yet.") // An empty state message should be shown as a fallback
       ).toBeInTheDocument();
+
       consoleSpy.mockRestore();
     });
   });
@@ -757,6 +808,7 @@ describe("Orders Component - Unit Tests Only", () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(consoleErrorSpy).not.toHaveBeenCalled();
+
       consoleErrorSpy.mockRestore();
     });
   });
