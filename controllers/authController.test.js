@@ -414,6 +414,28 @@ describe("Auth Controller Unit Tests", () => {
         );
         expect(mockRes.status).toHaveBeenCalledWith(200);
       });
+
+      // BVA: Valid Boundary (length 7)
+      it("should update profile with a new password of more than 6 characters", async () => {
+        req.body = { password: "password1" }; // 6 chars
+        const user = { _id: "userId123", password: "oldHashedPassword" };
+        userModel.findById.mockResolvedValue(user);
+        hashPassword.mockResolvedValue("newHashedPassword");
+        userModel.findByIdAndUpdate.mockResolvedValue({
+          ...user,
+          password: "newHashedPassword",
+        });
+
+        await updateProfileController(req, res);
+
+        expect(hashPassword).toHaveBeenCalledWith("password1");
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+          "userId123",
+          expect.objectContaining({ password: "newHashedPassword" }),
+          { new: true }
+        );
+        expect(res.status).toHaveBeenCalledWith(200);
+      });
     });
 
     // Control-Flow Path 3: Error handling
@@ -456,7 +478,6 @@ describe("Auth Controller Unit Tests", () => {
 
       await getOrdersController(mockReq, mockRes);
 
-      // 4. Assert each step of the chain was called correctly.
       expect(orderModel.find).toHaveBeenCalledWith({ buyer: "userId123" });
       expect(firstPopulateMock).toHaveBeenCalledWith("products", "-photo");
       expect(secondPopulateMock).toHaveBeenCalledWith("buyer", "name");
@@ -484,6 +505,7 @@ describe("Auth Controller Unit Tests", () => {
         })
       );
       expect(consoleSpy).toHaveBeenCalledWith(error);
+
       consoleSpy.mockRestore();
     });
   });

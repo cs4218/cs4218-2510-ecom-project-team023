@@ -28,7 +28,6 @@ describe("Order Model Unit Tests", () => {
   it("should create and save an order successfully with all fields", async () => {
     const buyerId = new mongoose.Types.ObjectId();
     const productId = new mongoose.Types.ObjectId();
-
     const orderData = {
       products: [productId],
       payment: { transactionId: "12345", success: true },
@@ -36,6 +35,7 @@ describe("Order Model Unit Tests", () => {
       status: "Processing",
     };
     const validOrder = new Order(orderData);
+
     const savedOrder = await validOrder.save();
 
     expect(savedOrder._id).toBeDefined();
@@ -65,7 +65,9 @@ describe("Order Model Unit Tests", () => {
         status: status,
       };
       const order = new Order(orderData);
+
       const savedOrder = await order.save();
+
       expect(savedOrder.status).toBe(status);
     }
   );
@@ -77,7 +79,9 @@ describe("Order Model Unit Tests", () => {
       // status is omitted
     };
     const order = new Order(orderData);
+
     const savedOrder = await order.save();
+
     expect(savedOrder.status).toBe("Not Process");
   });
 
@@ -95,22 +99,33 @@ describe("Order Model Unit Tests", () => {
     } catch (error) {
       err = error;
     }
+
     expect(err).toBeInstanceOf(mongoose.Error.ValidationError);
     expect(err.errors.status).toBeDefined();
   });
 
   // Timestamps
-  it("should automatically add createdAt and updatedAt timestamps", async () => {
+  it("should set createdAt and updatedAt timestamps on document creation", async () => {
     const order = new Order({ buyer: new mongoose.Types.ObjectId() });
+
     const savedOrder = await order.save();
 
     expect(savedOrder.createdAt).toBeInstanceOf(Date);
     expect(savedOrder.updatedAt).toBeInstanceOf(Date);
+    expect(savedOrder.updatedAt.getTime()).toBe(savedOrder.createdAt.getTime());
+  });
 
-    // Check if updatedAt is updated on modification
-    await new Promise((resolve) => setTimeout(resolve, 10)); // wait a bit
+  it("should update only the updatedAt timestamp on modification", async () => {
+    const order = new Order({ buyer: new mongoose.Types.ObjectId() });
+    const savedOrder = await order.save();
+    const originalCreatedAt = savedOrder.createdAt;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Main act: Modify and update the document
     savedOrder.status = "Processing";
     const updatedOrder = await savedOrder.save();
+
+    expect(updatedOrder.createdAt).toEqual(originalCreatedAt);
     expect(updatedOrder.updatedAt.getTime()).toBeGreaterThan(
       updatedOrder.createdAt.getTime()
     );
