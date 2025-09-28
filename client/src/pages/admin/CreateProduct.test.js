@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 // client/src/pages/admin/CreateProduct.test.js
 import React from "react";
 import axios from "axios";
