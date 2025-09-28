@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 // client/src/pages/Policy.test.js
 import React from "react";
 import { render, screen } from "@testing-library/react";

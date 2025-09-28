@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 // HomePage.test.jsx
 import React from "react";
 import axios from "axios";

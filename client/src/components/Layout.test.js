@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 // Layout.test.jsx
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";

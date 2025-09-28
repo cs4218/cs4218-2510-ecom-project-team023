@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 // Spinner.test.jsx
 import React from "react";
 import { render, screen, act } from "@testing-library/react";

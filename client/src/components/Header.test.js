@@ -1,4 +1,5 @@
-// Header.test.jsx (minimal branches, one assert per test)
+// Some tests written with help of AI
+// Header.test.jsx 
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -6,7 +7,7 @@ import "@testing-library/jest-dom/extend-expect";
 import userEvent from "@testing-library/user-event";
 import Header from "./Header";
 
-// --- Mock navigation to avoid MemoryRouter state updates (fixes act warning)
+// --- Mock navigation to avoid MemoryRouter state updates 
 jest.mock("react-router-dom", () => {
   const actual = jest.requireActual("react-router-dom");
   const NoNavLink = ({ to, children, onClick, ...rest }) => (

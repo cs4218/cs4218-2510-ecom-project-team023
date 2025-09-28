@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 // Contact.test.jsx
 import React from "react";
 import { render, screen } from "@testing-library/react";

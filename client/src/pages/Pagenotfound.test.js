@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 // client/src/pages/Pagenotfound.test.js
 import React from "react";
 import { MemoryRouter } from "react-router-dom";
