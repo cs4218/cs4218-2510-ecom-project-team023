@@ -14,7 +14,7 @@ jest.mock("../helpers/authHelper.js");
 jest.mock("jsonwebtoken");
 
 // Mock data
-const MOCK_REQUEST_BODY = {
+const MOCK_REGISTER_REQUEST_BODY = {
   DOB: "1990-01-01",
   name: "Alice",
   email: "alice.tan@example.com",
@@ -24,7 +24,7 @@ const MOCK_REQUEST_BODY = {
   answer: "My first pet's name",
 };
 
-const MOCK_USER_DATA = {
+const MOCK_REGISTER_USER_DATA = {
   _id: "64f6c8f4b4dcbf001c8e4a2b",
   name: "Alice",
   email: "alice.tan@example.com",
@@ -42,29 +42,32 @@ describe("Auth Controller Tests", () => {
   let mockReq, mockRes;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     mockReq = { body: {} };
     mockRes = {
       status: jest.fn().mockReturnThis(),
       send: jest.fn(),
       json: jest.fn(),
     };
-    jest.clearAllMocks();
   });
 
   describe("registerController", () => {
-    it("should return error if email missing", async () => {
-      mockReq.body = { ...MOCK_REQUEST_BODY, email: "" };
+    it("should return error if any required fields is/are missing", async () => {
+      mockReq.body = {};
       await registerController(mockReq, mockRes);
 
+      expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
-        message: "Email is Required",
+        success: false,
+        message:
+          "Missing required fields: Name, Email, Password, Phone, Address, Answer",
       });
     });
 
-    it("should return error if existing user", async () => {
-      userModel.findOne.mockResolvedValue(MOCK_USER_DATA);
+    it("should return error if there is an existing user", async () => {
+      userModel.findOne.mockResolvedValue(MOCK_REGISTER_USER_DATA);
 
-      mockReq.body = MOCK_REQUEST_BODY;
+      mockReq.body = MOCK_REGISTER_REQUEST_BODY;
       await registerController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(409);
@@ -80,10 +83,10 @@ describe("Auth Controller Tests", () => {
       userModel.findOne.mockResolvedValue(null);
       hashPassword.mockResolvedValue("hashedpassword");
       userModel.mockImplementation(() => ({
-        save: jest.fn().mockResolvedValue(MOCK_USER_DATA),
+        save: jest.fn().mockResolvedValue(MOCK_REGISTER_USER_DATA),
       }));
 
-      mockReq.body = MOCK_REQUEST_BODY;
+      mockReq.body = MOCK_REGISTER_REQUEST_BODY;
 
       await registerController(mockReq, mockRes);
 
@@ -92,13 +95,52 @@ describe("Auth Controller Tests", () => {
         expect.objectContaining({
           success: true,
           message: "User registered successfully",
-          user: MOCK_USER_DATA,
+          user: MOCK_REGISTER_USER_DATA,
+        })
+      );
+    });
+
+    it("should handle errors", async () => {
+      const error = new Error("Test error");
+      userModel.findOne.mockRejectedValue(error);
+
+      mockReq.body = MOCK_REGISTER_REQUEST_BODY;
+      await registerController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Error while registering user",
+          error,
         })
       );
     });
   });
 
   describe("loginController", () => {
+    it("should fail if email missing", async () => {
+      mockReq.body = { email: "", password: "123" };
+      await loginController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        success: false,
+        message: "No email or password provided",
+      });
+    });
+
+    it("should fail if password missing", async () => {
+      mockReq.body = { email: "a@test.com", password: "" };
+      await loginController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        success: false,
+        message: "No email or password provided",
+      });
+    });
+
     it("should fail if user not found", async () => {
       userModel.findOne.mockResolvedValue(null);
 
@@ -109,7 +151,31 @@ describe("Auth Controller Tests", () => {
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "Email is not registerd",
+          message: "Email is not registered",
+        })
+      );
+    });
+
+    it("should fail if password mismatch", async () => {
+      userModel.findOne.mockResolvedValue({
+        _id: "u1",
+        email: "a@test.com",
+        password: "hashed123",
+        name: "John",
+        phone: "999",
+        address: "Street",
+        role: 0,
+      });
+      comparePassword.mockResolvedValue(false);
+
+      mockReq.body = { email: "a@test.com", password: "123" };
+      await loginController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Invalid Password",
         })
       );
     });
@@ -130,14 +196,56 @@ describe("Auth Controller Tests", () => {
       mockReq.body = { email: "a@test.com", password: "123" };
       await loginController(mockReq, mockRes);
 
+      let mockUser = {
+        _id: "u1",
+        name: "John",
+        email: "a@test.com",
+        phone: "999",
+        address: "Street",
+        role: 0,
+      };
+
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.send).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, token: "tok123" })
+        expect.objectContaining({
+          success: true,
+          message: "login successfully",
+          user: mockUser,
+          token: "tok123",
+        })
+      );
+    });
+
+    it("should handle errors", async () => {
+      const error = new Error("Test error");
+      userModel.findOne.mockRejectedValue(error);
+
+      mockReq.body = { email: "a@test.com", password: "123" };
+      await loginController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Error in login",
+          error,
+        })
       );
     });
   });
 
   describe("forgotPasswordController", () => {
+    it("should fail if any field is missing", async () => {
+      mockReq.body = {};
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Missing required fields: Email, Answer, New Password",
+      });
+    });
+
     it("should fail if user not found", async () => {
       userModel.findOne.mockResolvedValue(null);
       mockReq.body = {
@@ -156,12 +264,68 @@ describe("Auth Controller Tests", () => {
         })
       );
     });
+
+    it("should reset password successfully", async () => {
+      userModel.findOne.mockResolvedValue({ _id: "u1" });
+      hashPassword.mockResolvedValue("hashednew123");
+      userModel.findByIdAndUpdate.mockResolvedValue(true);
+
+      mockReq.body = {
+        email: "a@test.com",
+        answer: "ans",
+        newPassword: "new123",
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Password Reset Successfully",
+        })
+      );
+    });
+
+    it("should handle errors", async () => {
+      const error = new Error("Test error");
+      userModel.findOne.mockRejectedValue(error);
+
+      mockReq.body = {
+        email: "a@test.com",
+        answer: "ans",
+        newPassword: "new123",
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Something went wrong",
+          error,
+        })
+      );
+    });
   });
 
   describe("testController", () => {
     it("should send protected routes message", () => {
       testController(mockReq, mockRes);
       expect(mockRes.send).toHaveBeenCalledWith("Protected Routes");
+    });
+
+    it("should handle errors", () => {
+      const error = new Error("Test error");
+      const badRes = {
+        send: () => {
+          throw error;
+        },
+        status: jest.fn().mockReturnThis(),
+      };
+
+      expect(() => testController(mockReq, badRes)).toThrow("Test error");
     });
   });
 });

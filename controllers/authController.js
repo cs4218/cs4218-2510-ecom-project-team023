@@ -8,24 +8,34 @@ export const registerController = async (req, res) => {
   try {
     const { name, email, password, phone, address, answer } = req.body;
     //validations
+    const errors = {};
+
     if (!name) {
-      return res.send({ error: "Name is Required" });
+      errors.name = "Name";
     }
     if (!email) {
-      return res.send({ message: "Email is Required" });
+      errors.email = "Email";
     }
     if (!password) {
-      return res.send({ message: "Password is Required" });
+      errors.password = "Password";
     }
     if (!phone) {
-      return res.send({ message: "Phone no is Required" });
+      errors.phone = "Phone";
     }
     if (!address) {
-      return res.send({ message: "Address is Required" });
+      errors.address = "Address";
     }
     if (!answer) {
-      return res.send({ message: "Answer is Required" });
+      errors.answer = "Answer";
     }
+
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).send({
+        success: false,
+        message: `Missing required fields: ${Object.values(errors).join(", ")}`,
+      });
+    }
+
     //check user
     const exisitingUser = await userModel.findOne({ email });
     //exisiting user
@@ -69,9 +79,9 @@ export const loginController = async (req, res) => {
     const { email, password } = req.body;
     //validation
     if (!email || !password) {
-      return res.status(404).send({
+      return res.status(400).send({
         success: false,
-        message: "Invalid email or password",
+        message: "No email or password provided",
       });
     }
     //check user
@@ -79,12 +89,12 @@ export const loginController = async (req, res) => {
     if (!user) {
       return res.status(404).send({
         success: false,
-        message: "Email is not registerd",
+        message: "Email is not registered",
       });
     }
     const match = await comparePassword(password, user.password);
     if (!match) {
-      return res.status(200).send({
+      return res.status(404).send({
         success: false,
         message: "Invalid Password",
       });
@@ -121,15 +131,26 @@ export const loginController = async (req, res) => {
 export const forgotPasswordController = async (req, res) => {
   try {
     const { email, answer, newPassword } = req.body;
+
+    const errors = {};
+
     if (!email) {
-      res.status(400).send({ message: "Emai is required" });
+      errors.email = "Email";
     }
     if (!answer) {
-      res.status(400).send({ message: "answer is required" });
+      errors.answer = "Answer";
     }
     if (!newPassword) {
-      res.status(400).send({ message: "New Password is required" });
+      errors.newPassword = "New Password";
     }
+
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).send({
+        success: false,
+        message: `Missing required fields: ${Object.values(errors).join(", ")}`,
+      });
+    }
+
     //check
     const user = await userModel.findOne({ email, answer });
     //validation
@@ -158,10 +179,10 @@ export const forgotPasswordController = async (req, res) => {
 //test controller
 export const testController = (req, res) => {
   try {
-    res.send("Protected Routes");
+    res.status(200).send("Protected Routes");
   } catch (error) {
     console.log(error);
-    res.send({ error });
+    res.status(500).send({ error });
   }
 };
 
