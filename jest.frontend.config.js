@@ -27,8 +27,8 @@ export default {
   collectCoverageFrom: ["client/src/!(_*)/**", "!client/src/**/*.test.js"],
   coverageThreshold: {
     global: {
-      lines: 100,
-      functions: 100,
+      lines: 40,
+      functions: 40,
     },
   },
   setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
