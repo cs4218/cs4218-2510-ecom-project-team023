@@ -17,7 +17,6 @@ jest.mock("../helpers/authHelper.js");
 describe("Auth Controller Unit Tests", () => {
   let req, res;
 
-  // Create mock req and res objects before each test
   beforeEach(() => {
     jest.clearAllMocks();
     req = {
