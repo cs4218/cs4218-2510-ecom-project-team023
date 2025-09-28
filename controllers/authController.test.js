@@ -417,7 +417,7 @@ describe("Auth Controller Unit Tests", () => {
 
       // BVA: Valid Boundary (length 7)
       it("should update profile with a new password of more than 6 characters", async () => {
-        req.body = { password: "password1" }; // 6 chars
+        mockReq.body = { password: "password1" }; // 6 chars
         const user = { _id: "userId123", password: "oldHashedPassword" };
         userModel.findById.mockResolvedValue(user);
         hashPassword.mockResolvedValue("newHashedPassword");
@@ -426,7 +426,7 @@ describe("Auth Controller Unit Tests", () => {
           password: "newHashedPassword",
         });
 
-        await updateProfileController(req, res);
+        await updateProfileController(mockReq, mockRes);
 
         expect(hashPassword).toHaveBeenCalledWith("password1");
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
@@ -434,7 +434,7 @@ describe("Auth Controller Unit Tests", () => {
           expect.objectContaining({ password: "newHashedPassword" }),
           { new: true }
         );
-        expect(res.status).toHaveBeenCalledWith(200);
+        expect(mockRes.status).toHaveBeenCalledWith(200);
       });
     });
 
@@ -526,7 +526,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(orderModel.find).toHaveBeenCalledWith({});
       expect(mockQuery.populate).toHaveBeenCalledWith("products", "-photo");
       expect(mockQuery.populate).toHaveBeenCalledWith("buyer", "name");
-      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: "-1" });
+      expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(mockRes.json).toHaveBeenCalledWith(mockOrders);
     });
   });
