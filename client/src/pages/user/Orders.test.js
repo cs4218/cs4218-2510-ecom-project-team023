@@ -138,6 +138,7 @@ describe("Orders Component - Unit Tests Only", () => {
       ]);
 
       render(<Orders />);
+
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledTimes(1);
       });
@@ -148,14 +149,18 @@ describe("Orders Component - Unit Tests Only", () => {
     it("handles null auth state gracefully", () => {
       // UNIT TEST: Tests null safety in component
       mockUseAuth.mockReturnValue([null, jest.fn()]);
+
       render(<Orders />);
+
       expect(screen.getByText("All Orders")).toBeInTheDocument();
     });
 
     it("handles undefined auth state gracefully", () => {
       // UNIT TEST: Tests undefined safety in component
       mockUseAuth.mockReturnValue([undefined, jest.fn()]);
+
       render(<Orders />);
+
       expect(screen.getByText("All Orders")).toBeInTheDocument();
     });
   });
@@ -307,6 +312,7 @@ describe("Orders Component - Unit Tests Only", () => {
       ];
 
       axios.get.mockResolvedValue({ data: mockOrders });
+
       render(<Orders />);
 
       await waitFor(() => {
@@ -334,7 +340,9 @@ describe("Orders Component - Unit Tests Only", () => {
         axios.get.mockResolvedValue({
           data: [{ ...baseOrder, payment: { success: true } }],
         });
+
         render(<Orders />);
+
         await waitFor(() =>
           expect(screen.getByText("Success")).toBeInTheDocument()
         );
@@ -344,7 +352,9 @@ describe("Orders Component - Unit Tests Only", () => {
         axios.get.mockResolvedValue({
           data: [{ ...baseOrder, payment: { success: false } }],
         });
+
         render(<Orders />);
+
         await waitFor(() =>
           expect(screen.getByText("Failed")).toBeInTheDocument()
         );
@@ -352,14 +362,16 @@ describe("Orders Component - Unit Tests Only", () => {
 
       it("should display 'Failed' when payment object is missing the success property", async () => {
         axios.get.mockResolvedValue({ data: [{ ...baseOrder, payment: {} }] });
+
         render(<Orders />);
+
         await waitFor(() =>
           expect(screen.getByText("Failed")).toBeInTheDocument()
         );
       });
     });
 
-    // Partition: Product Quantity (Boundary Value Analysis)
+    // Partition: Product Quantity
     describe("Product Quantity Display", () => {
       const baseOrder = {
         _id: "order1",
@@ -374,21 +386,43 @@ describe("Orders Component - Unit Tests Only", () => {
         price: 100,
       };
 
-      it("should display quantity 0 for an empty products array (Lower Boundary)", async () => {
+      it("should display quantity 0 for an empty products array", async () => {
+        // UNIT TEST: Verifies that products is counted as 0 if empty
         axios.get.mockResolvedValue({ data: [{ ...baseOrder, products: [] }] });
+
         render(<Orders />);
-        const quantityCell = await screen.findByRole("cell", { name: /0/i });
+
+        const quantityCell = await screen.findByRole("cell", { name: 0 });
         expect(quantityCell).toBeInTheDocument();
       });
 
-      it("should display quantity 3 for multiple products in array (Upper Boundary)", async () => {
+      it("should display quantity 1 for a product in array", async () => {
+        // UNIT TEST: Verifies that products is counted if not empty
+        const products = [{ ...fakeProduct, _id: "prod1" }];
+        axios.get.mockResolvedValue({
+          data: [{ ...baseOrder, products }],
+        });
+
+        render(<Orders />);
+
+        const cells = await screen.findAllByRole("cell", { name: 1 });
+
+        // Note: This is brittle. If the table structure changes, this test breaks,
+        // as it looks into the table strcuture (the Quantity column).
+        expect(cells[1]).toBeInTheDocument();
+      });
+
+      it("should display quantity 3 for multiple products in array", async () => {
+        // UNIT TEST: Verifies that the count is for elements within the array
         const products = [
           { ...fakeProduct, _id: "prod1" },
           { ...fakeProduct, _id: "prod2" },
           { ...fakeProduct, _id: "prod3" },
         ];
         axios.get.mockResolvedValue({ data: [{ ...baseOrder, products }] });
+
         render(<Orders />);
+
         const quantityCell = await screen.findByRole("cell", { name: 3 });
         expect(quantityCell).toBeInTheDocument();
       });
@@ -510,6 +544,7 @@ describe("Orders Component - Unit Tests Only", () => {
       ];
       axios.get.mockResolvedValueOnce({ data: mockOrders });
       mockUseAuth.mockReturnValue([null, jest.fn()]);
+
       render(<Orders />);
 
       // Component should render without any orders initially
@@ -555,7 +590,9 @@ describe("Orders Component - Unit Tests Only", () => {
         { token: "valid-token", user: { name: "Test User" } },
         jest.fn(),
       ]);
+
       render(<Orders />);
+
       expect(axios.get).toHaveBeenCalledTimes(1);
       expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
       await waitFor(() => {
@@ -565,33 +602,52 @@ describe("Orders Component - Unit Tests Only", () => {
 
     it("does not call getOrders when auth token is not present", () => {
       // UNIT TEST: Verifies that the getOrders API call is NOT triggered when no auth token is available.
-      axios.get.mockClear();
       mockUseAuth.mockReturnValue([{ user: { name: "Test User" } }, jest.fn()]);
+
       render(<Orders />);
+
       expect(axios.get).not.toHaveBeenCalled();
     });
   });
 
   // ERROR HANDLING LOGIC TESTS
   describe("Error Handling Logic", () => {
-    it("handles malformed order data gracefully", () => {
-      // UNIT TEST: Tests component resilience to bad data (purely on input)
+    describe("handles malformed order data gracefully", () => {
+      // UNIT TESTS: Tests component resilience to bad data
+      // Arrange
       const processOrderData = (orders) => {
         if (!orders || !Array.isArray(orders)) return [];
         return orders.filter((order) => order && order._id);
       };
 
-      expect(processOrderData(null)).toEqual([]);
-      expect(processOrderData(undefined)).toEqual([]);
-      expect(processOrderData("not an array")).toEqual([]);
-      expect(processOrderData([])).toEqual([]);
-      expect(processOrderData([null, undefined, { _id: "1" }])).toEqual([
-        { _id: "1" },
-      ]);
+      // Testcases definition: [description, input, expectedOutput]
+      const testCases = [
+        ["a null value", null, []],
+        ["an undefined value", undefined, []],
+        ["a string instead of an array", "not an array", []],
+        ["an empty array", [], []],
+        [
+          "an array with mixed valid and invalid items",
+          [null, undefined, { _id: "1" }],
+          [{ _id: "1" }],
+        ],
+      ];
+
+      // Run each testcase
+      it.each(testCases)(
+        "should return an empty array for %s",
+        (description, input, expected) => {
+          // Act
+          const result = processOrderData(input);
+
+          // Assert
+          expect(result).toEqual(expected);
+        }
+      );
     });
 
-    it("handles missing required properties safely", () => {
-      // UNIT TEST: Tests safe property access
+    describe("handles missing required properties safely", () => {
+      // Arrange
       const safePropertyAccess = (obj, path) => {
         try {
           return path
@@ -609,15 +665,27 @@ describe("Orders Component - Unit Tests Only", () => {
         },
       };
 
-      expect(safePropertyAccess(testData, "order.buyer.name")).toBe("John");
-      expect(safePropertyAccess(testData, "order.payment.success")).toBe(true);
-      expect(
-        safePropertyAccess(testData, "order.missing.property")
-      ).toBeUndefined();
-      expect(safePropertyAccess(null, "any.path")).toBeUndefined();
+      // Testcases definition: [description, object, path, expectedOutput]
+      const testCases = [
+        ["a valid nested property", testData, "order.buyer.name", "John"],
+        ["a valid boolean property", testData, "order.payment.success", true],
+        ["a missing nested property", testData, "order.missing.property", undefined],
+        ["a path on a null object", null, "any.path", undefined],
+      ];
+
+      it.each(testCases)(
+        "should handle %s correctly",
+        (description, obj, path, expected) => {
+          // Act
+          const result = safePropertyAccess(obj, path);
+
+          // Assert
+          expect(result).toBe(expected);
+        }
+      );
     });
 
-    it("handles malformed order data gracefully", async () => {
+    it("handles malformed order data gracefully - component level", async () => {
       // UNIT TEST: Component-level; verifies the component gracefully handles orders with missing or null properties.
       const malformedOrder = {
         _id: "order3",
@@ -628,7 +696,9 @@ describe("Orders Component - Unit Tests Only", () => {
       };
       axios.get.mockResolvedValueOnce({ data: [malformedOrder] });
       mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
+
       render(<Orders />);
+
       await waitFor(() => {
         expect(screen.getByText("All Orders")).toBeInTheDocument(); // page did not crash
       });
@@ -646,7 +716,6 @@ describe("Orders Component - Unit Tests Only", () => {
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
       });
-
       // The table should not be present
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
       expect(
@@ -662,7 +731,9 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests component stability
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      expect(() => render(<Orders />)).not.toThrow();
+      const act = () => render(<Orders />);
+
+      expect(act).not.toThrow();
     });
 
     it("handles component unmounting gracefully", () => {
@@ -680,9 +751,11 @@ describe("Orders Component - Unit Tests Only", () => {
       axios.get.mockImplementation(() => mockPromise);
       mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
       const consoleErrorSpy = jest.spyOn(console, "error");
+
       const { unmount } = render(<Orders />);
       unmount();
       await new Promise((resolve) => setTimeout(resolve, 100));
+
       expect(consoleErrorSpy).not.toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
     });
