@@ -20,7 +20,4 @@ const categorySchema = new mongoose.Schema(
   }
 );
 
-// (Optional but explicit) ensure the unique index is created
-categorySchema.index({ name: 1 }, { unique: true });
-
 export default mongoose.model("Category", categorySchema);
