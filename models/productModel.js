@@ -4,28 +4,39 @@ const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, "Name is required"],
+      trim: true, // <- trims "  Nice Chair  " -> "Nice Chair"
     },
     slug: {
       type: String,
-      required: true,
+      required: [true, "Slug is required"],
+      trim: true,
+      lowercase: true,      // <- "MiXeD-Case" -> "mixed-case"
+      unique: true,         // <- must be unique
     },
     description: {
       type: String,
-      required: true,
+      required: [true, "Description is required"],
+      trim: true,
     },
     price: {
       type: Number,
-      required: true,
+      required: [true, "Price is required"],
+      min: [0, "Price must be >= 0"], // <- no negatives
     },
     category: {
-      type: mongoose.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: true,
     },
     quantity: {
       type: Number,
-      required: true,
+      required: [true, "Quantity is required"],
+      min: [0, "Quantity must be >= 0"], // <- no negatives
+      validate: {
+        validator: Number.isInteger,     // <- integers only
+        message: "Quantity must be an integer",
+      },
     },
     photo: {
       data: Buffer,
@@ -33,9 +44,10 @@ const productSchema = new mongoose.Schema(
     },
     shipping: {
       type: Boolean,
+      default: false, // <- defaults to false
     },
   },
-  { timestamps: true }
+  { timestamps: true } // <- createdAt/updatedAt
 );
 
-export default mongoose.model("Products", productSchema);
+export default mongoose.model("Product", productSchema);

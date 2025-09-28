@@ -6,7 +6,7 @@ import { useCart } from "../context/cart";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Layout from "./../components/Layout";
-import { AiOutlineReload } from "react-icons/ai";
+import { SyncOutlined } from "@ant-design/icons";
 import "../styles/Homepages.css";
 
 const HomePage = () => {
@@ -207,11 +207,14 @@ const HomePage = () => {
                 }}
               >
                 {loading ? (
-                  "Loading ..."
+                  <>
+                    <SyncOutlined spin style={{ marginRight: 8 }} aria-hidden />
+                    Loading ...
+                  </>
                 ) : (
                   <>
-                    {" "}
-                    Loadmore <AiOutlineReload />
+                    <SyncOutlined style={{ marginRight: 8 }} aria-hidden />
+                    Loadmore
                   </>
                 )}
               </button>

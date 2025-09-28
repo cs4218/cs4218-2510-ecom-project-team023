@@ -7,22 +7,50 @@ const CategoryProduct = () => {
   const params = useParams();
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
-  const [category, setCategory] = useState([]);
+  const [category, setCategory] = useState({name: "-"});
 
   useEffect(() => {
-    if (params?.slug) getPrductsByCat();
+    const slug = params?.slug;
+    if (!slug) return;
+    // Clear previous data immediately (fixes "clears previous products" test)
+    setProducts([]);
+    setCategory({ name: "—" });
+
+    // Create an AbortController to cancel stale requests on slug change/unmount
+    const controller = new AbortController();
+
+    // Capture the slug at request time and guard the setState calls (race-proof)
+    const fetchProductsByCategory = async () => {
+      try {
+        const { data } = await axios.get(
+          `/api/v1/product/product-category/${slug}`,
+          { signal: controller.signal }
+        );
+
+        // Guard against late responses after slug changed or request was aborted
+        if (controller.signal.aborted) return;
+        if (slug !== params.slug) return;
+
+        setProducts(Array.isArray(data?.products) ? data.products : []);
+        setCategory(data?.category ?? { name: "—" });
+      } catch (error) {
+        // Ignore cancellations; log real errors
+        if (
+          error?.name === "CanceledError" ||
+          error?.code === "ERR_CANCELED" ||
+          axios.isCancel?.(error)
+        ) {
+          return;
+        }
+        console.log(error);
+      }
+    };
+
+    fetchProductsByCategory();
+
+    // Cleanup cancels the in-flight request when slug changes/unmounts
+    return () => controller.abort();
   }, [params?.slug]);
-  const getPrductsByCat = async () => {
-    try {
-      const { data } = await axios.get(
-        `/api/v1/product/product-category/${params.slug}`
-      );
-      setProducts(data?.products);
-      setCategory(data?.category);
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   return (
     <Layout>
@@ -43,14 +71,13 @@ const CategoryProduct = () => {
                     <div className="card-name-price">
                       <h5 className="card-title">{p.name}</h5>
                       <h5 className="card-title card-price">
-                        {p.price.toLocaleString("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                        })}
+                        {typeof p.price === "number"
+                        ? p.price.toLocaleString("en-US", { style: "currency", currency: "USD" })
+                        : "—"}
                       </h5>
                     </div>
                     <p className="card-text ">
-                      {p.description.substring(0, 60)}...
+                      {(p.description ?? "").substring(0, 60)}...
                     </p>
                     <div className="card-name-price">
                       <button
