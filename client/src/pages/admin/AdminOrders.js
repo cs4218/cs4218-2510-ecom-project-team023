@@ -74,7 +74,7 @@ const AdminOrders = () => {
                           <td>{i + 1}</td>
                           <td>
                             <Select
-                              bordered={false}
+                              variant="borderless"
                               onChange={(value) => handleChange(o._id, value)}
                               defaultValue={o?.status}
                             >
@@ -123,7 +123,7 @@ const AdminOrders = () => {
               </table>
             </div>
           ) : (
-            <p className="text-center">You haven't placed any orders yet.</p>
+            <p className="text-center">No orders yet.</p>
           )}
         </div>
       </div>
