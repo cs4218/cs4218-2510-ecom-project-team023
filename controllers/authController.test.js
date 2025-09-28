@@ -42,6 +42,7 @@ describe("Auth Controller Unit Tests", () => {
         password: "oldHashedPassword",
       };
       const updatedUserDetails = { name: "New Name", phone: "1234567890" };
+
       req.body = updatedUserDetails;
 
       userModel.findById.mockResolvedValue(existingUser);
@@ -77,7 +78,9 @@ describe("Auth Controller Unit Tests", () => {
       // BVA: Invalid Boundary (length 5)
       it("should return an error for passwords less than 6 characters", async () => {
         req.body = { password: "12345" }; // 5 chars
+
         await updateProfileController(req, res);
+
         expect(res.json).toHaveBeenCalledWith({
           error: "Passsword is required and 6 character long",
         });
@@ -98,6 +101,28 @@ describe("Auth Controller Unit Tests", () => {
         await updateProfileController(req, res);
 
         expect(hashPassword).toHaveBeenCalledWith("password");
+        expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+          "userId123",
+          expect.objectContaining({ password: "newHashedPassword" }),
+          { new: true }
+        );
+        expect(res.status).toHaveBeenCalledWith(200);
+      });
+
+      // BVA: Valid Boundary (length 7)
+      it("should update profile with a new password of more than 6 characters", async () => {
+        req.body = { password: "password1" }; // 6 chars
+        const user = { _id: "userId123", password: "oldHashedPassword" };
+        userModel.findById.mockResolvedValue(user);
+        hashPassword.mockResolvedValue("newHashedPassword");
+        userModel.findByIdAndUpdate.mockResolvedValue({
+          ...user,
+          password: "newHashedPassword",
+        });
+
+        await updateProfileController(req, res);
+
+        expect(hashPassword).toHaveBeenCalledWith("password1");
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           "userId123",
           expect.objectContaining({ password: "newHashedPassword" }),
@@ -147,7 +172,6 @@ describe("Auth Controller Unit Tests", () => {
 
       await getOrdersController(req, res);
 
-      // 4. Assert each step of the chain was called correctly.
       expect(orderModel.find).toHaveBeenCalledWith({ buyer: "userId123" });
       expect(firstPopulateMock).toHaveBeenCalledWith("products", "-photo");
       expect(secondPopulateMock).toHaveBeenCalledWith("buyer", "name");
@@ -175,6 +199,7 @@ describe("Auth Controller Unit Tests", () => {
         })
       );
       expect(consoleSpy).toHaveBeenCalledWith(error);
+
       consoleSpy.mockRestore();
     });
   });
