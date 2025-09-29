@@ -17,11 +17,19 @@ const CartPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  //total price
+// total price
   const totalPrice = () => {
     try {
       let total = 0;
-      cart?.map((item) => total = total + item.price);
+      cart?.map((item) => {
+        if (item.price === undefined || item.price === null) {
+          throw new Error(`Cart item ${item._id || 'unknown'} has missing price.`);
+        }
+        if (typeof item.price !== 'number' || !isFinite(item.price)) {
+          throw new Error(`Cart item ${item._id || 'unknown'} has non-numeric price: ${item.price}`);
+        }
+        total = total + item.price
+      });
       return total.toLocaleString("en-US", {
         style: "currency",
         currency: "USD",

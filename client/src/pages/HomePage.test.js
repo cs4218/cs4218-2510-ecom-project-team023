@@ -380,5 +380,28 @@ describe("HomePage", () => {
       expect(spy).toHaveBeenCalled();
     });
   });
+
+  test("filterProduct gracefully handles API error and logs to console", async () => {
+    // Arrange
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    const mockError = new Error("Filter API failed");
+    axios.post = jest.fn().mockRejectedValue(mockError);
+
+    render(<HomePage />);
+    
+    const books = await screen.findByLabelText("Books");
+    
+    fireEvent.click(books);
+
+    await waitFor(() => {
+      expect(logSpy).toHaveBeenCalledWith(mockError);
+    });
+    
+    expect(screen.getByText("Alpha")).toBeInTheDocument(); 
+
+    // Clean up the spy
+    logSpy.mockRestore();
+});
 });
 
