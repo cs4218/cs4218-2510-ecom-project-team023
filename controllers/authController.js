@@ -255,3 +255,41 @@ export const orderStatusController = async (req, res) => {
     });
   }
 };
+
+export const getAllUsersController = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const startIndex = (page - 1) * limit;
+
+    // 3. Get the total count of users (for calculating total pages)
+    const totalUsers = await userModel.countDocuments({});
+
+    // 4. Fetch the paginated results
+    const users = await userModel
+      .find({})
+      .select("-password -answer") // Select fields to return, excluding sensitive ones
+      .sort({ createdAt: -1 })     // Optionally sort by creation date (newest first)
+      .limit(limit)
+      .skip(startIndex);
+
+    // 5. Send the response
+    res.status(200).send({
+      success: true,
+      message: "Paginated users list fetched successfully",
+      users,
+      currentPage: page,
+      totalPages: Math.ceil(totalUsers / limit),
+      totalUsers: totalUsers,
+      limit: limit,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error while getting all users with pagination",
+      error: error.message,
+    });
+  }
+};

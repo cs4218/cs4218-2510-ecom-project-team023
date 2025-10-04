@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/extend-expect";
 import axios from "axios";
 import toast from "react-hot-toast";
 import CartPage from "./CartPage";
+import { act } from 'react-dom/test-utils';
 
 // --- Mocks Setup ---
 
@@ -215,49 +216,50 @@ describe("CartPage", () => {
         expect(removeButtons).toHaveLength(2);
     });
 
-    test("handlePayment success processes payment, clears cart/localStorage, navigates, and shows success toast", async () => {
-        mockAuth = { user: { name: "User", address: "addr" }, token: "123" };
-        mockCart = MOCK_CART;
-        localStorageMock.setItem("cart", JSON.stringify(MOCK_CART));
+test("handlePayment success processes payment, clears cart/localStorage, navigates, and shows success toast", async () => {
+    mockAuth = { user: { name: "User", address: "addr" }, token: "123" };
+    mockCart = MOCK_CART;
+    localStorageMock.setItem("cart", JSON.stringify(MOCK_CART));
 
-        // Mock API success for payment
-        axios.post.mockResolvedValue({ data: { ok: true } });
+    // Mock API success for payment
+    axios.post.mockResolvedValue({ data: { ok: true } });
 
-        render(<CartPage />);
+    render(<CartPage />);
 
-        await waitFor(() => {
-            expect(screen.getByRole("button", { name: "Make Payment" })).not.toBeDisabled();
-        });
-
-        const paymentButton = screen.getByRole("button", { name: "Make Payment" });
-        fireEvent.click(paymentButton);
-
-        // 1. Verify loading state is shown (Corrected button text from "....." to "....")
-        expect(screen.getByRole("button", { name: "Processing ...." })).toBeInTheDocument();
-
-        // Wait for async payment flow to complete
-        await waitFor(() => {
-            // 2. Verify Braintree method requested
-            expect(mockInstance.requestPaymentMethod).toHaveBeenCalledTimes(1);
-            
-            // 3. Verify payment API called
-            expect(axios.post).toHaveBeenCalledWith("/api/v1/product/braintree/payment", {
-                nonce: 'mock-nonce',
-                cart: MOCK_CART,
-            });
-
-            // 4. Verify cart/localStorage clear
-            expect(localStorageMock.getItem("cart")).toBeNull();
-            expect(mockSetCart).toHaveBeenCalledWith([]);
-            
-            // 5. Verify navigation and success toast
-            expect(mockNavigate).toHaveBeenCalledWith("/dashboard/user/orders");
-            expect(toast.success).toHaveBeenCalledWith("Payment Completed Successfully ");
-        });
-
-        // 6. Verify loading state is gone
-        expect(screen.queryByRole("button", { name: "Processing ...." })).toBeNull();
+    await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Make Payment" })).not.toBeDisabled();
     });
+
+    const paymentButton = screen.getByRole("button", { name: "Make Payment" });
+
+    // Wrap the fireEvent click and async actions inside act to ensure it is properly awaited
+    await act(async () => {
+        fireEvent.click(paymentButton);
+    });
+    // Wait for async payment flow to complete
+    await waitFor(() => {
+        // 2. Verify Braintree method requested
+        expect(mockInstance.requestPaymentMethod).toHaveBeenCalledTimes(1);
+        
+        // 3. Verify payment API called
+        expect(axios.post).toHaveBeenCalledWith("/api/v1/product/braintree/payment", {
+            nonce: 'mock-nonce',
+            cart: MOCK_CART,
+        });
+
+        // 4. Verify cart/localStorage clear
+        expect(localStorageMock.getItem("cart")).toBeNull();
+        expect(mockSetCart).toHaveBeenCalledWith([]);
+        
+        // 5. Verify navigation and success toast
+        expect(mockNavigate).toHaveBeenCalledWith("/dashboard/user/orders");
+        expect(toast.success).toHaveBeenCalledWith("Payment Completed Successfully ");
+    });
+
+    // 6. Verify loading state is gone
+    expect(screen.queryByRole("button", { name: "Processing ...." })).toBeNull();
+});
+
   
 
     test("Make Payment button is disabled if user address is missing", async () => {
@@ -311,7 +313,10 @@ describe("CartPage", () => {
         });
 
         const paymentButton = screen.getByRole("button", { name: "Make Payment" });
-        fireEvent.click(paymentButton);
+            // Wrap the fireEvent click and async actions inside act to ensure it is properly awaited
+        await act(async () => {
+            fireEvent.click(paymentButton);
+        });
 
         await waitFor(() => {
             // paymentButton = screen.getByTestId("make-payment-btn");
