@@ -88,7 +88,7 @@ describe("Auth Controller Unit Tests", () => {
 
       // BVA: Valid Boundary (length 6)
       it("should update profile with a new password of exactly 6 characters", async () => {
-        req.body = { password: "password" }; // 6 chars
+        req.body = { password: "123456" }; // 6 chars
         const user = { _id: "userId123", password: "oldHashedPassword" };
         userModel.findById.mockResolvedValue(user);
         hashPassword.mockResolvedValue("newHashedPassword");
@@ -99,7 +99,7 @@ describe("Auth Controller Unit Tests", () => {
 
         await updateProfileController(req, res);
 
-        expect(hashPassword).toHaveBeenCalledWith("password");
+        expect(hashPassword).toHaveBeenCalledWith("123456");
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           "userId123",
           expect.objectContaining({ password: "newHashedPassword" }),
@@ -110,7 +110,7 @@ describe("Auth Controller Unit Tests", () => {
 
       // BVA: Valid Boundary (length 7)
       it("should update profile with a new password of more than 6 characters", async () => {
-        req.body = { password: "pasword" }; // 7 chars
+        req.body = { password: "1234567" }; // 7 chars
         const user = { _id: "userId123", password: "oldHashedPassword" };
         userModel.findById.mockResolvedValue(user);
         hashPassword.mockResolvedValue("newHashedPassword");
@@ -121,7 +121,7 @@ describe("Auth Controller Unit Tests", () => {
 
         await updateProfileController(req, res);
 
-        expect(hashPassword).toHaveBeenCalledWith("pasword");
+        expect(hashPassword).toHaveBeenCalledWith("1234567");
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           "userId123",
           expect.objectContaining({ password: "newHashedPassword" }),
