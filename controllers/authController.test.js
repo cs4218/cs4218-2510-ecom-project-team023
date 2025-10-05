@@ -716,8 +716,8 @@ describe("Auth Controller Unit Tests", () => {
     it("should return 500 and an error message when an invalid status is provided (DB validation failure)", async () => {
       // Arrange
       const invalidStatus = "InvalidStatus";
-      req.params = { orderId: "orderId123" };
-      req.body = { status: invalidStatus };
+      mockReq.params = { orderId: "orderId123" };
+      mockReq.body = { status: invalidStatus };
 
       const validationError = new Error(
         "Mongoose validation failed: Status is not an allowed enum value."
@@ -726,7 +726,7 @@ describe("Auth Controller Unit Tests", () => {
       orderModel.findByIdAndUpdate.mockRejectedValue(validationError);
 
       // Act
-      await orderStatusController(req, res);
+      await orderStatusController(mockReq, mockRes);
 
       // Assert
       expect(orderModel.findByIdAndUpdate).toHaveBeenCalledWith(
@@ -736,15 +736,15 @@ describe("Auth Controller Unit Tests", () => {
       );
 
       // Check that the controller caught the error and sent the correct response
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.send).toHaveBeenCalledWith({
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
         message: "Error While Updateing Order",
         error: validationError, // Check that the error object was included in the response
       });
 
       // Crucially, the success path (res.json) should NOT have been called
-      expect(res.json).not.toHaveBeenCalled();
+      expect(mockRes.json).not.toHaveBeenCalled();
     });
 
     // Test for when orderId is invalid or not found
