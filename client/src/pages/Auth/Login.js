@@ -22,6 +22,7 @@ const Login = () => {
         email,
         password,
       });
+
       if (res && res.data.success) {
         toast.success(res.data && res.data.message, {
           duration: 5000,
@@ -38,9 +39,15 @@ const Login = () => {
         });
         localStorage.setItem("auth", JSON.stringify(res.data));
         navigate(location.state || "/");
+      } else {
+        toast.error(res.data.message);
       }
     } catch (error) {
-      if (error.response.status === 400 || error.response.status === 404) {
+      if (
+        error.response &&
+        error.response.status >= 400 &&
+        error.response.status < 500
+      ) {
         toast.error(error.response.data.message);
       } else {
         toast.error("Something went wrong");

@@ -100,7 +100,7 @@ describe("Login Page", () => {
     expect(screen.getByText("Forgot Password Page")).toBeInTheDocument();
   });
 
-  test("should login successfully and redirect to home", async () => {
+  test("should login user successfully", async () => {
     axios.post.mockResolvedValueOnce({
       data: {
         success: true,
@@ -154,7 +154,45 @@ describe("Login Page", () => {
     );
   });
 
-  test("should show toast error when axios throws a 404 invalid password error", async () => {
+  test("should show toast error when login is unsuccessful", async () => {
+    axios.post.mockResolvedValueOnce({
+      data: { success: false, message: "Unsuccessful Login" },
+    });
+
+    setup();
+    fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter Your Password"), {
+      target: { value: "wrongpassword" },
+    });
+    fireEvent.click(screen.getByText("LOGIN"));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+
+    expect(toast.error).toHaveBeenCalledWith("Unsuccessful Login");
+  });
+
+  test("should show toast error when axios return a 404 email not registered error", async () => {
+    axios.post.mockRejectedValueOnce({
+      response: { data: { message: "Email is not registered" }, status: 404 },
+    });
+
+    setup();
+    fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter Your Password"), {
+      target: { value: "wrongpassword" },
+    });
+    fireEvent.click(screen.getByText("LOGIN"));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+
+    expect(toast.error).toHaveBeenCalledWith("Email is not registered");
+  });
+
+  test("should show toast error when axios returns a 404 invalid password error", async () => {
     axios.post.mockRejectedValueOnce({
       response: {
         data: { message: "Invalid Password" },
