@@ -52,6 +52,7 @@
     "jest-environment-jsdom": "^29.7.0",
     "mongodb-memory-server": "^10.2.0",
     "sonarqube-scanner": "^3.3.0",
+    "supertest": "^7.1.4",
     "typescript-eslint": "^8.41.0"
   }
 }
