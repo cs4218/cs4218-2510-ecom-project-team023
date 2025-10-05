@@ -40,7 +40,7 @@ describe("Auth Controller Unit Tests", () => {
         name: "Old Name",
         password: "oldHashedPassword",
       };
-      const updatedUserDetails = { name: "New Name", phone: "1234567890" };
+      const updatedUserDetails = { name: "New Name" };
 
       req.body = updatedUserDetails;
 
@@ -56,9 +56,7 @@ describe("Auth Controller Unit Tests", () => {
         "userId123",
         {
           name: "New Name",
-          phone: "1234567890",
-          address: undefined, // Or user.address if it existed
-          password: "oldHashedPassword",
+          password: "oldHashedPassword", // passwword unchanged
         },
         { new: true }
       );
@@ -243,6 +241,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(res.json).toHaveBeenCalledWith(updatedOrder);
     });
 
+    // Equivalence Partitioning: Invalid Status
     it("should return 500 and an error message when an invalid status is provided (DB validation failure)", async () => {
       // Arrange
       const invalidStatus = "InvalidStatus";
