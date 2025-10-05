@@ -564,6 +564,85 @@ describe("searchProductController", () => {
       expect.objectContaining({ success: false, message: "Error In Search Product API" })
     );
   });
+
+    test("returns single product on exact name match", async () => {
+      const product = [{ _id: "p1", name: "Mac Book Air" }];
+      ProductModel.find.mockReturnValue({ select: () => Promise.resolve(product) });
+      const res = makeRes();
+      await searchProductController({ params: { keyword: "Mac Book Air" } }, res);
+      expect(res.json).toHaveBeenCalledWith(product);
+  });
+
+  test("returns products regardless of case", async () => {
+    const products = [{ _id: "p1" }];
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve(products) });
+    const res = makeRes();
+    await searchProductController({ params: { keyword: "mAc bOoK" } }, res);
+    expect(res.json).toHaveBeenCalledWith(products);
+  });
+
+  test("returns empty array for empty keyword", async () => {
+    const res = makeRes();
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve([]) });
+    await searchProductController({ params: { keyword: "" } }, res);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("returns empty array when keyword not found", async () => {
+    const res = makeRes();
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve([]) });
+    await searchProductController({ params: { keyword: "XYZ123" } }, res);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("handles very long keyword without crash", async () => {
+    const keyword = "a".repeat(255);
+    const products = [{ _id: "p1" }];
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve(products) });
+    const res = makeRes();
+    await searchProductController({ params: { keyword } }, res);
+    expect(res.json).toHaveBeenCalledWith(products);
+  });
+
+  test("handles keyword with special regex characters", async () => {
+    const keyword = "Laptop$^*";
+    const products = [{ _id: "p1" }];
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve(products) });
+    const res = makeRes();
+    await searchProductController({ params: { keyword } }, res);
+    expect(res.json).toHaveBeenCalledWith(products);
+  });
+
+  test("handles null keyword gracefully", async () => {
+    const res = makeRes();
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve([]) });
+    await searchProductController({ params: { keyword: null } }, res);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("returns multiple matching products for common keyword", async () => {
+    const products = [{ _id: "p1" }, { _id: "p2" }, { _id: "p3" }];
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve(products) });
+    const res = makeRes();
+    await searchProductController({ params: { keyword: "Laptop" } }, res);
+    expect(res.json).toHaveBeenCalledWith(products);
+  });
+
+  test("returns empty array for whitespace-only keyword", async () => {
+    const res = makeRes();
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve([]) });
+    await searchProductController({ params: { keyword: "    " } }, res);
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("handles large number of matches without crashing", async () => {
+    const products = Array.from({ length: 200 }, (_, i) => ({ _id: `p${i}` }));
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve(products) });
+    const res = makeRes();
+    await searchProductController({ params: { keyword: "Laptop" } }, res);
+    expect(res.json).toHaveBeenCalledWith(products);
+  });
+
 });
 
 /* ---------- realtedProductController ---------- */
