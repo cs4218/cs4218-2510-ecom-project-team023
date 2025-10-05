@@ -144,3 +144,53 @@ To begin unit testing with Jest in your project, follow these steps:
      ```bash
      npm run test
      ```
+
+## Milestone 1
+
+### 1. CI GitHub Workflow  
+
+[View our CI Workflow on GitHub Actions](https://github.com/cs4218/cs4218-2510-ecom-project-team023/actions)
+
+Our Continuous Integration (CI) pipeline ensures that every commit and pull request triggers automated tests and linting. This guarantees that only code passing all checks is merged into the main branch, maintaining consistent code quality and project stability.
+
+---
+
+### 2. Members’ Contributions  
+
+#### Helin
+| Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
+|----------|----------------------------------------|------------------------------|
+| *(To be filled)* | *(To be filled)* | *(To be filled)* |
+
+---
+
+#### Dominic
+| Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
+|----------|----------------------------------------|------------------------------|
+| **Product** | - `pages/ProductDetails.js`<br>- `pages/CategoryProduct.js` | - `controllers/productController.js`<br> 1. `getProductController`<br> 2. `getSingleProductController`<br> 3. `productPhotoController`<br> 4. `productFiltersController`<br> 5. `productCountController`<br> 6. `productListController`<br> 7. `searchProductController`<br> 8. `relatedProductController`<br> 9. `productCategoryController`<br><br>- `models/productModel.js` |
+| **Category** | - `hooks/useCategory.js`<br>- `pages/Categories.js` | - `controllers/categoryController.js`<br> 1. `categoryController`<br> 2. `singleCategoryController`<br><br>- `models/categoryModel.js` |
+
+---
+
+#### Mounil
+| Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
+|----------|----------------------------------------|------------------------------|
+| *(To be filled)* | *(To be filled)* | *(To be filled)* |
+
+---
+
+#### Dinghao
+| Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
+|----------|----------------------------------------|------------------------------|
+| **Cart** | - `pages/CartPage.js` </br> - `context/cart.js` | NA (handled by team members) |
+| **Search** | - `pages/Search.js` </br> - `context/search.js` </br> - `component/Form/SearchInput.js` | - `controllers/productController.js` </br> 1.`searchProductController` |
+| **AdminUsers** | - `pages/admin/Users.js` | - `controllers/authController.js` </br> 1. `getAllUsersController` |
+
+---
+
+#### Ryan
+| Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
+|----------|----------------------------------------|------------------------------|
+| *(To be filled)* | *(To be filled)* | *(To be filled)* |
+
+---

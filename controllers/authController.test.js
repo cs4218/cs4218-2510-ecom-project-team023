@@ -64,9 +64,10 @@ describe("Auth Controller Unit Tests", () => {
     };
   });
 
-  describe("registerController", () => {
-    it("should return error if any required fields is/are missing", async () => {
+  describe("registerController Unit Tests", () => {
+    test("should return error if any required fields is/are missing", async () => {
       mockReq.body = {};
+
       await registerController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -77,10 +78,65 @@ describe("Auth Controller Unit Tests", () => {
       });
     });
 
-    it("should return error if there is an existing user", async () => {
-      userModel.findOne.mockResolvedValue(MOCK_REGISTER_USER_DATA);
+    test("should reject password shorter than 6 characters", async () => {
+      mockReq.body = { ...MOCK_REGISTER_REQUEST_BODY, password: "12345" }; // 5 chars
 
+      await registerController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+      expect(userModel.findOne).not.toHaveBeenCalled();
+    });
+
+    test("should accept password exactly 6 characters", async () => {
+      mockReq.body = { ...MOCK_REGISTER_REQUEST_BODY, password: "123456" };
+      userModel.findOne.mockResolvedValue(null);
+      hashPassword.mockResolvedValue("hashedpassword");
+      userModel.mockImplementation(() => ({
+        save: jest.fn().mockResolvedValue(MOCK_REGISTER_USER_DATA),
+      }));
+
+      await registerController(mockReq, mockRes);
+
+      expect(hashPassword).toHaveBeenCalledWith("123456");
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "User registered successfully",
+          user: MOCK_REGISTER_USER_DATA,
+        })
+      );
+    });
+
+    test("should accept password longer than 6 characters", async () => {
+      mockReq.body = { ...MOCK_REGISTER_REQUEST_BODY, password: "1234567" };
+      userModel.findOne.mockResolvedValue(null);
+      hashPassword.mockResolvedValue("hashedpassword");
+      userModel.mockImplementation(() => ({
+        save: jest.fn().mockResolvedValue(MOCK_REGISTER_USER_DATA),
+      }));
+
+      await registerController(mockReq, mockRes);
+
+      expect(hashPassword).toHaveBeenCalledWith("1234567");
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "User registered successfully",
+          user: MOCK_REGISTER_USER_DATA,
+        })
+      );
+    });
+
+    test("should return error if user already exists", async () => {
+      userModel.findOne.mockResolvedValue(MOCK_REGISTER_USER_DATA);
       mockReq.body = MOCK_REGISTER_REQUEST_BODY;
+
       await registerController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(409);
@@ -92,13 +148,12 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    it("should register new user", async () => {
+    test("should register new user successfully", async () => {
       userModel.findOne.mockResolvedValue(null);
       hashPassword.mockResolvedValue("hashedpassword");
       userModel.mockImplementation(() => ({
         save: jest.fn().mockResolvedValue(MOCK_REGISTER_USER_DATA),
       }));
-
       mockReq.body = MOCK_REGISTER_REQUEST_BODY;
 
       await registerController(mockReq, mockRes);
@@ -113,11 +168,11 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    it("should handle errors", async () => {
+    test("should handle errors gracefully", async () => {
       const error = new Error("Test error");
       userModel.findOne.mockRejectedValue(error);
-
       mockReq.body = MOCK_REGISTER_REQUEST_BODY;
+
       await registerController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
@@ -131,9 +186,10 @@ describe("Auth Controller Unit Tests", () => {
     });
   });
 
-  describe("loginController", () => {
-    it("should fail if email missing", async () => {
+  describe("loginController Unit Tests", () => {
+    test("should fail if email missing", async () => {
       mockReq.body = { email: "", password: "123" };
+
       await loginController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -143,8 +199,9 @@ describe("Auth Controller Unit Tests", () => {
       });
     });
 
-    it("should fail if password missing", async () => {
+    test("should fail if password missing", async () => {
       mockReq.body = { email: "a@test.com", password: "" };
+
       await loginController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -154,10 +211,10 @@ describe("Auth Controller Unit Tests", () => {
       });
     });
 
-    it("should fail if user not found", async () => {
+    test("should fail if user not found", async () => {
       userModel.findOne.mockResolvedValue(null);
-
       mockReq.body = { email: "a@test.com", password: "123" };
+
       await loginController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
@@ -169,7 +226,7 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    it("should fail if password mismatch", async () => {
+    test("should fail if password mismatch", async () => {
       userModel.findOne.mockResolvedValue({
         _id: "u1",
         email: "a@test.com",
@@ -180,8 +237,8 @@ describe("Auth Controller Unit Tests", () => {
         role: 0,
       });
       comparePassword.mockResolvedValue(false);
-
       mockReq.body = { email: "a@test.com", password: "123" };
+
       await loginController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
@@ -193,7 +250,7 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    it("should login successfully", async () => {
+    test("should login successfully", async () => {
       userModel.findOne.mockResolvedValue({
         _id: "u1",
         email: "a@test.com",
@@ -205,8 +262,8 @@ describe("Auth Controller Unit Tests", () => {
       });
       comparePassword.mockResolvedValue(true);
       JWT.sign.mockReturnValue("tok123");
-
       mockReq.body = { email: "a@test.com", password: "123" };
+
       await loginController(mockReq, mockRes);
 
       let mockUser = {
@@ -229,11 +286,11 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    it("should handle errors", async () => {
+    test("should handle errors", async () => {
       const error = new Error("Test error");
       userModel.findOne.mockRejectedValue(error);
-
       mockReq.body = { email: "a@test.com", password: "123" };
+
       await loginController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(500);
@@ -247,9 +304,10 @@ describe("Auth Controller Unit Tests", () => {
     });
   });
 
-  describe("forgotPasswordController", () => {
-    it("should fail if any field is missing", async () => {
+  describe("forgotPasswordController Unit Tests", () => {
+    test("should fail if any field is missing", async () => {
       mockReq.body = {};
+
       await forgotPasswordController(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
@@ -259,7 +317,7 @@ describe("Auth Controller Unit Tests", () => {
       });
     });
 
-    it("should fail if user not found", async () => {
+    test("should fail if user not found", async () => {
       userModel.findOne.mockResolvedValue(null);
       mockReq.body = {
         email: "a@test.com",
@@ -278,7 +336,7 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    it("should reset password successfully", async () => {
+    test("should reset password successfully", async () => {
       userModel.findOne.mockResolvedValue({ _id: "u1" });
       hashPassword.mockResolvedValue("hashednew123");
       userModel.findByIdAndUpdate.mockResolvedValue(true);
@@ -300,10 +358,70 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    it("should handle errors", async () => {
+    test("should reject newPassword shorter than 6 characters (5 chars)", async () => {
+      userModel.findOne.mockResolvedValue({ _id: "u1" });
+      mockReq.body = {
+        email: "example@email.com",
+        answer: "ans",
+        newPassword: "12345", // 5 chars
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    });
+
+    test("should accept newPassword exactly 6 characters", async () => {
+      userModel.findOne.mockResolvedValue({ _id: "u1" });
+      hashPassword.mockResolvedValue("hashednew123");
+      userModel.findByIdAndUpdate.mockResolvedValue(true);
+      mockReq.body = {
+        email: "example@email.com",
+        answer: "ans",
+        newPassword: "123456", // 6 chars
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(hashPassword).toHaveBeenCalledWith("123456");
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Password Reset Successfully",
+        })
+      );
+    });
+
+    test("should accept newPassword longer than 6 characters (7 chars)", async () => {
+      userModel.findOne.mockResolvedValue({ _id: "u1" });
+      hashPassword.mockResolvedValue("hashednew123");
+      userModel.findByIdAndUpdate.mockResolvedValue(true);
+      mockReq.body = {
+        email: "example@example.com",
+        answer: "ans",
+        newPassword: "1234567", // 7 chars
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(hashPassword).toHaveBeenCalledWith("1234567");
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Password Reset Successfully",
+        })
+      );
+    });
+
+    test("should handle errors gracefully", async () => {
       const error = new Error("Test error");
       userModel.findOne.mockRejectedValue(error);
-
       mockReq.body = {
         email: "a@test.com",
         answer: "ans",
@@ -323,13 +441,14 @@ describe("Auth Controller Unit Tests", () => {
     });
   });
 
-  describe("testController", () => {
-    it("should send protected routes message", () => {
+  describe("testController Unit Tests", () => {
+    test("should send protected routes message", () => {
       testController(mockReq, mockRes);
+
       expect(mockRes.send).toHaveBeenCalledWith("Protected Routes");
     });
 
-    it("should handle errors", () => {
+    test("should handle errors", () => {
       const error = new Error("Test error");
       const badRes = {
         send: () => {
@@ -342,16 +461,38 @@ describe("Auth Controller Unit Tests", () => {
     });
   });
 
-  // --- Tests for updateProfileController ---
-  describe("updateProfileController", () => {
-    // Control-Flow Path 1: Successful update without password change
-    it("should update user profile successfully without changing the password", async () => {
+  describe("updateProfileController Unit Tests", () => {
+    let mockReq, mockRes;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+
+      mockReq = {
+        user: { _id: "userId123" },
+        body: {},
+      };
+
+      mockRes = {
+        status: jest.fn().mockReturnThis(),
+        send: jest.fn(),
+      };
+    });
+
+    test("should update user profile successfully without changing the password", async () => {
       const existingUser = {
         _id: "userId123",
         name: "Old Name",
+        phone: "9999999999",
+        address: "Old Address",
         password: "oldHashedPassword",
       };
-      const updatedUserDetails = { name: "New Name", phone: "1234567890" };
+
+      const updatedUserDetails = {
+        name: "New Name",
+        phone: "1234567890",
+        address: "New Address",
+      };
+
       mockReq.body = updatedUserDetails;
 
       userModel.findById.mockResolvedValue(existingUser);
@@ -362,42 +503,55 @@ describe("Auth Controller Unit Tests", () => {
 
       await updateProfileController(mockReq, mockRes);
 
+      expect(userModel.findById).toHaveBeenCalledWith("userId123");
+      expect(hashPassword).not.toHaveBeenCalled();
+
       expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
         "userId123",
         {
           name: "New Name",
-          phone: "1234567890",
-          address: undefined, // Or user.address if it existed
           password: "oldHashedPassword",
+          phone: "1234567890",
+          address: "New Address",
         },
         { new: true }
       );
+
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          message: "Profile Updated SUccessfully",
+          message: "Profile updated successfully",
         })
       );
-      expect(hashPassword).not.toHaveBeenCalled();
     });
 
-    // Control-Flow Path 2 & BVA: Password update
     describe("Password Update Logic (BVA & EP)", () => {
-      // BVA: Invalid Boundary (length 5)
-      it("should return an error for passwords less than 6 characters", async () => {
+      // BVA - Invalid Boundary (length 5)
+      test("should return an error for password shorter than 6 characters", async () => {
         mockReq.body = { password: "12345" }; // 5 chars
+        const consoleSpy = jest
+          .spyOn(console, "log")
+          .mockImplementation(() => {});
+
         await updateProfileController(mockReq, mockRes);
-        expect(mockRes.json).toHaveBeenCalledWith({
-          error: "Passsword is required and 6 character long",
+
+        expect(mockRes.status).toHaveBeenCalledWith(400);
+        expect(mockRes.send).toHaveBeenCalledWith({
+          success: false,
+          message: "Password is required and 6 characters long",
         });
         expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
+        expect(hashPassword).not.toHaveBeenCalled();
+
+        consoleSpy.mockRestore();
       });
 
-      // BVA: Valid Boundary (length 6)
-      it("should update profile with a new password of exactly 6 characters", async () => {
-        mockReq.body = { password: "password" }; // 6 chars
+      // BVA - Valid Boundary (length 6)
+      test("should update profile with a new password of exactly 6 characters", async () => {
         const user = { _id: "userId123", password: "oldHashedPassword" };
+        mockReq.body = { password: "abcdef" }; // 6 chars
+
         userModel.findById.mockResolvedValue(user);
         hashPassword.mockResolvedValue("newHashedPassword");
         userModel.findByIdAndUpdate.mockResolvedValue({
@@ -407,19 +561,26 @@ describe("Auth Controller Unit Tests", () => {
 
         await updateProfileController(mockReq, mockRes);
 
-        expect(hashPassword).toHaveBeenCalledWith("password");
+        expect(hashPassword).toHaveBeenCalledWith("abcdef");
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           "userId123",
           expect.objectContaining({ password: "newHashedPassword" }),
           { new: true }
         );
         expect(mockRes.status).toHaveBeenCalledWith(200);
+        expect(mockRes.send).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "Profile updated successfully",
+          })
+        );
       });
 
-      // BVA: Valid Boundary (length 7)
-      it("should update profile with a new password of more than 6 characters", async () => {
-        mockReq.body = { password: "password1" }; // 6 chars
+      // BVA - Valid Boundary (length 7)
+      test("should update profile with a new password longer than 6 characters", async () => {
         const user = { _id: "userId123", password: "oldHashedPassword" };
+        mockReq.body = { password: "abcdef1" }; // 7 chars
+
         userModel.findById.mockResolvedValue(user);
         hashPassword.mockResolvedValue("newHashedPassword");
         userModel.findByIdAndUpdate.mockResolvedValue({
@@ -429,7 +590,7 @@ describe("Auth Controller Unit Tests", () => {
 
         await updateProfileController(mockReq, mockRes);
 
-        expect(hashPassword).toHaveBeenCalledWith("password1");
+        expect(hashPassword).toHaveBeenCalledWith("abcdef1");
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           "userId123",
           expect.objectContaining({ password: "newHashedPassword" }),
@@ -439,8 +600,7 @@ describe("Auth Controller Unit Tests", () => {
       });
     });
 
-    // Control-Flow Path 3: Error handling
-    it("should handle errors during profile update and return a 400 status", async () => {
+    test("should handle errors during profile update and return 400 status", async () => {
       const error = new Error("Database error");
       userModel.findById.mockRejectedValue(error);
       mockReq.body = { name: "Test" };
@@ -450,13 +610,14 @@ describe("Auth Controller Unit Tests", () => {
 
       await updateProfileController(mockReq, mockRes);
 
+      expect(consoleSpy).toHaveBeenCalledWith(error);
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
-        message: "Error WHile Update profile",
+        message: "Error while updating profile",
         error,
       });
-      expect(consoleSpy).toHaveBeenCalledWith(error);
+
       consoleSpy.mockRestore();
     });
   });

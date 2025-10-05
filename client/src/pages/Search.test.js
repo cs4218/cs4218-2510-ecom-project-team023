@@ -32,7 +32,7 @@ describe("Search Component Coverage", () => {
     jest.clearAllMocks();
   });
 
-  test("Renders product details, correct count, and passes title to Layout when results are found", () => {
+  test("1. Renders product details, correct count, and passes title to Layout when results are found", () => {
     // Set up mock with products
     mockValues.results = MOCK_PRODUCTS;
 

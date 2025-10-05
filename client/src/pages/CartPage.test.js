@@ -216,51 +216,49 @@ describe("CartPage", () => {
         expect(removeButtons).toHaveLength(2);
     });
 
-test("handlePayment success processes payment, clears cart/localStorage, navigates, and shows success toast", async () => {
-    mockAuth = { user: { name: "User", address: "addr" }, token: "123" };
-    mockCart = MOCK_CART;
-    localStorageMock.setItem("cart", JSON.stringify(MOCK_CART));
+    test("handlePayment success processes payment, clears cart/localStorage, navigates, and shows success toast", async () => {
+        mockAuth = { user: { name: "User", address: "addr" }, token: "123" };
+        mockCart = MOCK_CART;
+        localStorageMock.setItem("cart", JSON.stringify(MOCK_CART));
 
-    // Mock API success for payment
-    axios.post.mockResolvedValue({ data: { ok: true } });
+        // Mock API success for payment
+        axios.post.mockResolvedValue({ data: { ok: true } });
 
-    render(<CartPage />);
+        render(<CartPage />);
 
-    await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Make Payment" })).not.toBeDisabled();
-    });
-
-    const paymentButton = screen.getByRole("button", { name: "Make Payment" });
-
-    // Wrap the fireEvent click and async actions inside act to ensure it is properly awaited
-    await act(async () => {
-        fireEvent.click(paymentButton);
-    });
-    // Wait for async payment flow to complete
-    await waitFor(() => {
-        // 2. Verify Braintree method requested
-        expect(mockInstance.requestPaymentMethod).toHaveBeenCalledTimes(1);
-        
-        // 3. Verify payment API called
-        expect(axios.post).toHaveBeenCalledWith("/api/v1/product/braintree/payment", {
-            nonce: 'mock-nonce',
-            cart: MOCK_CART,
+        await waitFor(() => {
+            expect(screen.getByRole("button", { name: "Make Payment" })).not.toBeDisabled();
         });
 
-        // 4. Verify cart/localStorage clear
-        expect(localStorageMock.getItem("cart")).toBeNull();
-        expect(mockSetCart).toHaveBeenCalledWith([]);
-        
-        // 5. Verify navigation and success toast
-        expect(mockNavigate).toHaveBeenCalledWith("/dashboard/user/orders");
-        expect(toast.success).toHaveBeenCalledWith("Payment Completed Successfully ");
+        const paymentButton = screen.getByRole("button", { name: "Make Payment" });
+
+        // Wrap the fireEvent click and async actions inside act to ensure it is properly awaited
+        await act(async () => {
+            fireEvent.click(paymentButton);
+        });
+        // Wait for async payment flow to complete
+        await waitFor(() => {
+            // 2. Verify Braintree method requested
+            expect(mockInstance.requestPaymentMethod).toHaveBeenCalledTimes(1);
+            
+            // 3. Verify payment API called
+            expect(axios.post).toHaveBeenCalledWith("/api/v1/product/braintree/payment", {
+                nonce: 'mock-nonce',
+                cart: MOCK_CART,
+            });
+
+            // 4. Verify cart/localStorage clear
+            expect(localStorageMock.getItem("cart")).toBeNull();
+            expect(mockSetCart).toHaveBeenCalledWith([]);
+            
+            // 5. Verify navigation and success toast
+            expect(mockNavigate).toHaveBeenCalledWith("/dashboard/user/orders");
+            expect(toast.success).toHaveBeenCalledWith("Payment Completed Successfully ");
+        });
+
+        // 6. Verify loading state is gone
+        expect(screen.queryByRole("button", { name: "Processing ...." })).toBeNull();
     });
-
-    // 6. Verify loading state is gone
-    expect(screen.queryByRole("button", { name: "Processing ...." })).toBeNull();
-});
-
-  
 
     test("Make Payment button is disabled if user address is missing", async () => {
         // Auth token and cart present, but address is null
@@ -274,9 +272,9 @@ test("handlePayment success processes payment, clears cart/localStorage, navigat
             expect(paymentButton).toBeDisabled();
             expect(screen.getByRole("button", { name: "Update Address" })).toBeInTheDocument();
         });
-        });
+    });
 
-        test("shows login prompt button when cart has items but user is not logged in", async () => {
+    test("shows login prompt button when cart has items but user is not logged in", async () => {
         mockAuth = { user: null, token: null };
         mockCart = MOCK_CART;
         render(<CartPage />);
@@ -457,44 +455,44 @@ test("handlePayment success processes payment, clears cart/localStorage, navigat
       // Assert 2: Navigation called for profile again
       expect(mockNavigate).toHaveBeenCalledWith("/dashboard/user/profile");
   });
-  test("removeCartItem logs error to console when a runtime error occurs", async () => {
-    // Arrange 1: Spy on console.log
-    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    test("removeCartItem logs error to console when a runtime error occurs", async () => {
+      // Arrange 1: Spy on console.log
+      const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
-    // Arrange 2: Set up a functional mock cart
-    mockAuth = { user: { name: "User" }, token: "123" };
-    mockCart = MOCK_CART; // MOCK_CART = [{ _id: "p1", ... }, { _id: "p2", ... }]
+      // Arrange 2: Set up a functional mock cart
+      mockAuth = { user: { name: "User" }, token: "123" };
+      mockCart = MOCK_CART; // MOCK_CART = [{ _id: "p1", ... }, { _id: "p2", ... }]
 
-    // Arrange 3: Temporarily override Array.prototype.splice to throw an error.
-    // We use jest.spyOn and mockImplementation to control the standard function.
-    const spliceSpy = jest.spyOn(Array.prototype, 'splice');
-    const mockError = new Error("Mocked Splice Failure");
+      // Arrange 3: Temporarily override Array.prototype.splice to throw an error.
+      // We use jest.spyOn and mockImplementation to control the standard function.
+      const spliceSpy = jest.spyOn(Array.prototype, 'splice');
+      const mockError = new Error("Mocked Splice Failure");
 
-    // The first time splice is called (in removeCartItem), throw an error.
-    spliceSpy.mockImplementationOnce(() => {
-    throw mockError;
+      // The first time splice is called (in removeCartItem), throw an error.
+      spliceSpy.mockImplementationOnce(() => {
+      throw mockError;
+      });
+
+      render(<CartPage />);
+
+      // Wait for the component to stabilize and elements to be present
+      const removeButtonElement = await screen.findByTestId("p1-remove-cart");
+
+      // Act: Click the remove button, which calls removeCartItem
+      fireEvent.click(removeButtonElement);
+
+      // Assert: Check that the error was caught and logged to the console
+      await waitFor(() => {
+      expect(logSpy).toHaveBeenCalledWith(mockError);
+      });
+
+      // Assert: Verify that setCart and localStorage.setItem were NOT called 
+      // after the failure (the function should exit early due to the catch block).
+      expect(mockSetCart).not.toHaveBeenCalled();
+      expect(localStorage.setItem).not.toHaveBeenCalled();
+
+      // Cleanup: Restore the original Array.prototype.splice function
+      spliceSpy.mockRestore();
+      logSpy.mockRestore();
     });
-
-    render(<CartPage />);
-
-    // Wait for the component to stabilize and elements to be present
-    const removeButtonElement = await screen.findByTestId("p1-remove-cart");
-
-    // Act: Click the remove button, which calls removeCartItem
-    fireEvent.click(removeButtonElement);
-
-    // Assert: Check that the error was caught and logged to the console
-    await waitFor(() => {
-    expect(logSpy).toHaveBeenCalledWith(mockError);
-    });
-
-    // Assert: Verify that setCart and localStorage.setItem were NOT called 
-    // after the failure (the function should exit early due to the catch block).
-    expect(mockSetCart).not.toHaveBeenCalled();
-    expect(localStorage.setItem).not.toHaveBeenCalled();
-
-    // Cleanup: Restore the original Array.prototype.splice function
-    spliceSpy.mockRestore();
-    logSpy.mockRestore();
-  });
 });
