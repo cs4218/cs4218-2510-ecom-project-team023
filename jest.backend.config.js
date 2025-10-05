@@ -2,8 +2,8 @@ export default {
   displayName: "backend",
   testEnvironment: "node",
 
-  // Run only the specific test file temporarily
-  testMatch: ["<rootDir>/controllers/authController.test.js"],
+  // Run all test files ending with .test.js
+  testMatch: ["<rootDir>/**/*.test.js"],
 
   collectCoverage: true,
   collectCoverageFrom: [
