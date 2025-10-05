@@ -36,6 +36,13 @@ export const registerController = async (req, res) => {
       });
     }
 
+    if (password && password.length < 6) {
+      return res.status(400).send({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
     //check user
     const exisitingUser = await userModel.findOne({ email });
     //exisiting user
@@ -127,7 +134,6 @@ export const loginController = async (req, res) => {
 };
 
 //forgotPasswordController
-
 export const forgotPasswordController = async (req, res) => {
   try {
     const { email, answer, newPassword } = req.body;
@@ -186,14 +192,17 @@ export const testController = (req, res) => {
   }
 };
 
-//update prfole
+//update profile
 export const updateProfileController = async (req, res) => {
   try {
     const { name, password, address, phone } = req.body;
     const user = await userModel.findById(req.user._id);
     //password
     if (password && password.length < 6) {
-      return res.json({ error: "Passsword is required and 6 character long" });
+      return res.status(400).send({
+        success: false,
+        message: "Password is required and 6 characters long",
+      });
     }
     const hashedPassword = password ? await hashPassword(password) : undefined;
     const updatedUser = await userModel.findByIdAndUpdate(
@@ -208,14 +217,14 @@ export const updateProfileController = async (req, res) => {
     );
     return res.status(200).send({
       success: true,
-      message: "Profile Updated SUccessfully",
+      message: "Profile updated successfully",
       updatedUser,
     });
   } catch (error) {
     console.log(error);
     return res.status(400).send({
       success: false,
-      message: "Error WHile Update profile",
+      message: "Error while updating profile",
       error,
     });
   }
