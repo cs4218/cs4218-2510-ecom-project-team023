@@ -241,7 +241,7 @@ describe("Auth Controller Unit Tests", () => {
 
       await loginController(mockReq, mockRes);
 
-      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
