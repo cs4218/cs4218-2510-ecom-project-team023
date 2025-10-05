@@ -1,10 +1,14 @@
 export default {
+  // display name
   displayName: "backend",
+
+  // when testing backend
   testEnvironment: "node",
 
-  // Run all test files ending with .test.js
-  testMatch: ["<rootDir>/**/*.test.js"],
+  // which test to run
+  testMatch: ["<rootDir>/!(client)/**/*.test.js"],
 
+  // jest code coverage
   collectCoverage: true,
   collectCoverageFrom: [
     "config/**/*.js",
