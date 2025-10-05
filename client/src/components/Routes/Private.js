@@ -44,7 +44,7 @@ export default function PrivateRoute() {
     } else {
       setOk(false);
     }
-  }, [auth?.token, setAuth, navigate]);
+  }, [auth?.token, setAuth, navigate, auth]);
 
   return ok ? <Outlet /> : <Spinner path="" />;
 }
