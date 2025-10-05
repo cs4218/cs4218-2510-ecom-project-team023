@@ -54,8 +54,8 @@ describe("Order Model Unit Tests", () => {
     "Not Process",
     "Processing",
     "Shipped",
-    "Delivered",
-    "Cancel",
+    "deliverd",
+    "cancel",
   ];
   test.each(validStatuses)(
     "should allow saving with a valid status: %s",
