@@ -101,7 +101,7 @@ export const loginController = async (req, res) => {
     }
     const match = await comparePassword(password, user.password);
     if (!match) {
-      return res.status(404).send({
+      return res.status(401).send({
         success: false,
         message: "Invalid Password",
       });
@@ -299,7 +299,7 @@ export const getAllUsersController = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    
+
     const startIndex = (page - 1) * limit;
 
     const totalUsers = await userModel.countDocuments({});
@@ -307,7 +307,7 @@ export const getAllUsersController = async (req, res) => {
     const users = await userModel
       .find({})
       .select("-password -answer") // Select fields to return, excluding sensitive ones
-      .sort({ createdAt: -1 })     // Optionally sort by creation date (newest first)
+      .sort({ createdAt: -1 }) // Optionally sort by creation date (newest first)
       .limit(limit)
       .skip(startIndex);
 
