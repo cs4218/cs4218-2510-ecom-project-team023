@@ -510,7 +510,7 @@ describe("Auth Controller Unit Tests", () => {
         "userId123",
         {
           name: "New Name",
-          password: "oldHashedPassword",
+          password: "oldHashedPassword", // password unchanged
           phone: "1234567890",
           address: "New Address",
         },
@@ -526,7 +526,7 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
-    describe("Password Update Logic (BVA & EP)", () => {
+    describe("Password Update Logic (BVA)", () => {
       // BVA - Invalid Boundary (length 5)
       test("should return an error for password shorter than 6 characters", async () => {
         mockReq.body = { password: "12345" }; // 5 chars
@@ -710,6 +710,41 @@ describe("Auth Controller Unit Tests", () => {
         { new: true }
       );
       expect(mockRes.json).toHaveBeenCalledWith(updatedOrder);
+    });
+
+    // Equivalence Partitioning: Invalid Status
+    it("should return 500 and an error message when an invalid status is provided (DB validation failure)", async () => {
+      // Arrange
+      const invalidStatus = "InvalidStatus";
+      mockReq.params = { orderId: "orderId123" };
+      mockReq.body = { status: invalidStatus };
+
+      const validationError = new Error(
+        "Mongoose validation failed: Status is not an allowed enum value."
+      );
+
+      orderModel.findByIdAndUpdate.mockRejectedValue(validationError);
+
+      // Act
+      await orderStatusController(mockReq, mockRes);
+
+      // Assert
+      expect(orderModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        "orderId123",
+        { status: invalidStatus },
+        { new: true }
+      );
+
+      // Check that the controller caught the error and sent the correct response
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Error While Updateing Order",
+        error: validationError, // Check that the error object was included in the response
+      });
+
+      // Crucially, the success path (res.json) should NOT have been called
+      expect(mockRes.json).not.toHaveBeenCalled();
     });
 
     // Test for when orderId is invalid or not found
