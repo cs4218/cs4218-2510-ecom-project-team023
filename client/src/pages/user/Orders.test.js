@@ -175,8 +175,8 @@ describe("Orders Component - Unit Tests Only", () => {
       ]);
     });
 
-    it("renders table headers with correctly, with correct capitalization", async () => {
-      // UNIT TEST: Verifies that the table headers are displayed with the correct capitalization.
+    it("renders table headers with correctly", async () => {
+      // UNIT TEST: Verifies that the table headers are displayed correctly (only once, correct capitalization).
       const mockOrders = [
         {
           _id: "order1",
@@ -200,6 +200,9 @@ describe("Orders Component - Unit Tests Only", () => {
       render(<Orders />);
 
       await waitFor(() => {
+        const headers = screen.getAllByRole("columnheader");
+        expect(headers).toHaveLength(6); 
+
         expect(
           screen.getByRole("columnheader", { name: "#" })
         ).toBeInTheDocument();
