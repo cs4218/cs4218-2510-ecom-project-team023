@@ -1,3 +1,5 @@
+// this file have been written with the help of AI
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -31,7 +33,6 @@ beforeEach(() => {
     mockAxiosGet.mockClear(); // Ensure axios mock is clear for each test
 });
 
-// 2. Initial Input Test (Your existing test)
 test('Input displays context keyword and calls setValues on change', () => {
     const initialValues = { keyword: 'initial search', results: [] };
     renderWithMocks(initialValues);
@@ -48,7 +49,6 @@ test('Input displays context keyword and calls setValues on change', () => {
     });
 });
 
-// 3. Successful Search Submission Test
 test('Successful search submission updates context and navigates', async () => {
     const keyword = 'test-query';
     const apiData = [{ id: 1, name: 'Product 1' }];
@@ -81,9 +81,7 @@ test('Successful search submission updates context and navigates', async () => {
     });
 });
 
-
-// 4. Failed Search Submission Test
-test('3. Failed search submission logs error and does not navigate', async () => {
+test('Failed search submission logs error and does not navigate', async () => {
     const keyword = 'failing-query';
     const error = new Error('API down');
     

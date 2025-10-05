@@ -1,3 +1,5 @@
+// this file has been written with the help of AI
+
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
