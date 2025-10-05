@@ -175,7 +175,13 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 #### Mounil
 | Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
 |----------|----------------------------------------|------------------------------|
-| *(To be filled)* | *(To be filled)* | *(To be filled)* |
+| **Admin Dashboard|	- `components/AdminMenu.js`<br>-  `pages/admin/AdminDashboard.js` | |	
+| **Admin Actions|	- `components/Form/CategoryForm.js`<br>- `pages/admin/CreateCategory.js`<br>- `pages/admin/CreateProduct.js`<br>- `pages/admin/UpdateProduct.js` | |	
+| **Admin View Products|	- `pages/admin/Products.js` | |	
+| **General|	- `components/Footer.js`<br>- `components/Header.js`<br>- `components/Layout.js`<br>- `components/Spinner.js`<br>- `components/UserMenu.js` -<br> `pages/About.js` -<br> `pages/Pagenotfound.js` | |	
+| **Contact|	- `pages/Contact.js` | |	
+| **Policy|	- `pages/Policy.js` | |	
+| **Home|	- `pages/HomePage.js` | |
 
 ---
 
