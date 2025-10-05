@@ -438,7 +438,7 @@ describe("AdminOrders Component - Unit Tests Only", () => {
         expect(cells[1]).toBeInTheDocument();
       });
 
-      it("should display quantity 3 for multiple products in array", async () => {
+      it("should display the appropriate quantity for products in the array", async () => {
         // UNIT TEST: Verifies that the count is for elements within the array
         const products = [
           { ...fakeProduct, _id: "prod1" },
@@ -505,25 +505,25 @@ describe("AdminOrders Component - Unit Tests Only", () => {
         desc?.substring(0, maxLength) || "";
 
       // BVA
-      const longDesc =
-        "This is a very long description that exceeds thirty characters";
-      const shortDesc = "Short description";
+      const longDesc = "This is a very long description";
+      const shortDesc = "This is a very long descripti";
       const fittedDesc = "This is a very long descriptio";
+      const expectedFittedDesc = "This is a very long descriptio";
 
       it.each([
         {
-          input: longDesc,
-          expected: "This is a very long descriptio",
+          input: longDesc, // (31 chars)
+          expected: expectedFittedDesc,
           case: "a long description",
         },
         {
-          input: shortDesc,
-          expected: "Short description",
+          input: shortDesc, // (29 chars)
+          expected: "This is a very long descripti",
           case: "a short description",
         },
         {
-          input: fittedDesc,
-          expected: "This is a very long descriptio",
+          input: fittedDesc, // (30 chars)
+          expected: expectedFittedDesc,
           case: "a fitted description",
         },
         { input: "", expected: "", case: "an empty string" },
