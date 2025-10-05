@@ -7,7 +7,7 @@ import Pagenotfound from "./pages/Pagenotfound";
 import Register from "./pages/Auth/Register";
 import Login from "./pages/Auth/Login";
 import Dashboard from "./pages/user/Dashboard";
-import PrivateRoute from "./components/Routes/Private";
+import PrivateRoute from "./components/Routes/PrivateRoute";
 import AdminRoute from "./components/Routes/AdminRoute";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import CreateCategory from "./pages/admin/CreateCategory";

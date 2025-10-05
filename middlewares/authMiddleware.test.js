@@ -117,7 +117,7 @@ describe("Auth Middleware Tests", () => {
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
-        message: "UnAuthorized Access",
+        message: "Unauthorized Access",
       });
       expect(mockNext).not.toHaveBeenCalled();
     });
