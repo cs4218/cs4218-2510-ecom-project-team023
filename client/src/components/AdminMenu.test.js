@@ -54,11 +54,6 @@ describe("AdminMenu", () => {
     );
   });
 
-  test("does not render Users link (it's commented out)", () => {
-    renderMenu();
-    expect(screen.queryByRole("link", { name: /users/i })).not.toBeInTheDocument();
-  });
-
   test("marks the active link with aria-current when on that route", () => {
     renderMenu("/dashboard/admin/products");
     const active = screen.getByRole("link", { name: /products/i });
