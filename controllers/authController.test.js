@@ -110,7 +110,7 @@ describe("Auth Controller Unit Tests", () => {
 
       // BVA: Valid Boundary (length 7)
       it("should update profile with a new password of more than 6 characters", async () => {
-        req.body = { password: "pasword" }; // 7 chars
+        req.body = { password: "password1" }; // 6 chars
         const user = { _id: "userId123", password: "oldHashedPassword" };
         userModel.findById.mockResolvedValue(user);
         hashPassword.mockResolvedValue("newHashedPassword");
@@ -121,7 +121,7 @@ describe("Auth Controller Unit Tests", () => {
 
         await updateProfileController(req, res);
 
-        expect(hashPassword).toHaveBeenCalledWith("pasword");
+        expect(hashPassword).toHaveBeenCalledWith("password1");
         expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
           "userId123",
           expect.objectContaining({ password: "newHashedPassword" }),
