@@ -1,9 +1,9 @@
 // Tests are written with the help of AI
 import React from "react";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import axios from "axios";
-import Orders from "./Orders";
+import AdminOrders from "./AdminOrders";
 
 // MOCKS
 jest.mock("axios");
@@ -18,10 +18,10 @@ jest.mock("../../context/auth", () => ({
   useAuth: jest.fn(),
 }));
 
-// Mock components to isolate Orders component
-jest.mock("../../components/UserMenu", () => {
-  return function UserMenu() {
-    return <div data-testid="user-menu">Mocked User Menu</div>;
+// Mock components to isolate AdminOrders component
+jest.mock("../../components/AdminMenu", () => {
+  return function AdminMenu() {
+    return <div data-testid="admin-menu">Mocked Admin Menu</div>;
   };
 });
 
@@ -42,6 +42,30 @@ jest.mock("react-router-dom", () => ({
   ),
 }));
 
+// Mock antd Select so we can click options and trigger onChange
+jest.mock("antd", () => {
+  const React = require("react");
+  const Select = ({ defaultValue, onChange, children }) => (
+    <div role="listbox" aria-label="order-status" data-default={defaultValue}>
+      <div data-testid="status-options">
+        {React.Children.map(children, (child) => {
+          if (!child) return null;
+          const { value, children: label } = child.props || {};
+          return (
+            <button type="button" onClick={() => onChange?.(value)}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+  const Option = ({ children }) => <>{children}</>;
+  Select.Option = Option;
+  return { __esModule: true, Select, Option };
+});
+
+
 // Mock window.matchMedia for responsive components;
 // To ensure test suite is robust and can handle potential dependencies
 // without unexpected crashes.
@@ -57,7 +81,7 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // UNIT TESTS
-describe("Orders Component - Unit Tests Only", () => {
+describe("AdminOrders Component - Unit Tests Only", () => {
   const mockUseAuth = require("../../context/auth").useAuth;
 
   afterEach(() => {
@@ -75,13 +99,13 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests only JSX structure rendering
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       expect(screen.getByTestId("layout")).toBeInTheDocument();
       expect(screen.getByTestId("layout-title")).toHaveTextContent(
-        "Your Orders"
+        "All Orders Data"
       );
-      expect(screen.getByTestId("user-menu")).toBeInTheDocument();
+      expect(screen.getByTestId("admin-menu")).toBeInTheDocument();
       expect(screen.getByText("All Orders")).toBeInTheDocument();
     });
 
@@ -89,9 +113,11 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests layout
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      const { container } = render(<Orders />);
+      const { container } = render(<AdminOrders />);
 
-      expect(container.querySelector(".container-fluid")).toBeInTheDocument();
+      expect(
+        container.querySelector(".row.dashboard")
+      ).toBeInTheDocument();
       expect(container.querySelector(".dashboard")).toBeInTheDocument();
       expect(container.querySelector(".row")).toBeInTheDocument();
       expect(container.querySelector(".col-md-3")).toBeInTheDocument();
@@ -102,15 +128,15 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests rendering with empty orders array
       axios.get.mockResolvedValue({ data: [] });
       mockUseAuth.mockReturnValue([
-        { token: "test-token", user: { name: "Test" } },
+        { token: "test-token", user: { name: "Test", role: 1} },
         jest.fn(),
       ]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       await waitFor(() => {
         expect(
-          screen.getByText("You haven't placed any orders yet.")
+          screen.getByText("No orders yet.")
         ).toBeInTheDocument();
       });
     });
@@ -121,9 +147,9 @@ describe("Orders Component - Unit Tests Only", () => {
     it("renders without calling useEffect when no auth token", () => {
       // UNIT TEST: Tests conditional logic for auth token
       const mockSetAuth = jest.fn();
-      mockUseAuth.mockReturnValue([{ user: { name: "Test" } }, mockSetAuth]);
+      mockUseAuth.mockReturnValue([{ user: { name: "Test", role: 1 } }, mockSetAuth]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       expect(screen.getByText("All Orders")).toBeInTheDocument();
       expect(screen.getByTestId("layout")).toBeInTheDocument();
@@ -133,24 +159,24 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests rendering when auth token exists
       const mockSetAuth = jest.fn();
       mockUseAuth.mockReturnValue([
-        { token: "valid-token", user: { name: "Test User" } },
+        { token: "valid-token", user: { name: "Test User", role: 1 } },
         mockSetAuth,
       ]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       await waitFor(() => {
         expect(axios.get).toHaveBeenCalledTimes(1);
       });
       expect(screen.getByText("All Orders")).toBeInTheDocument();
-      expect(screen.getByTestId("user-menu")).toBeInTheDocument();
+      expect(screen.getByTestId("admin-menu")).toBeInTheDocument();
     });
 
     it("handles null auth state gracefully", () => {
       // UNIT TEST: Tests null safety in component
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       expect(screen.getByText("All Orders")).toBeInTheDocument();
     });
@@ -159,7 +185,7 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests undefined safety in component
       mockUseAuth.mockReturnValue([undefined, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       expect(screen.getByText("All Orders")).toBeInTheDocument();
     });
@@ -170,7 +196,7 @@ describe("Orders Component - Unit Tests Only", () => {
     beforeEach(() => {
       // Mock successful auth for these tests
       mockUseAuth.mockReturnValue([
-        { token: "test-token", user: { name: "Test" } },
+        { token: "test-token", user: { name: "Test", role: 1 } },
         jest.fn(),
       ]);
     });
@@ -197,7 +223,7 @@ describe("Orders Component - Unit Tests Only", () => {
       axios.get.mockResolvedValueOnce({ data: mockOrders });
       mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       await waitFor(() => {
         expect(
@@ -247,7 +273,7 @@ describe("Orders Component - Unit Tests Only", () => {
         jest.fn(),
       ]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       await waitFor(() => {
         expect(screen.getByText("Processing")).toBeInTheDocument();
@@ -313,7 +339,7 @@ describe("Orders Component - Unit Tests Only", () => {
 
       axios.get.mockResolvedValue({ data: mockOrders });
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       await waitFor(() => {
         // Assert that only valid orders are rendered
@@ -341,7 +367,7 @@ describe("Orders Component - Unit Tests Only", () => {
           data: [{ ...baseOrder, payment: { success: true } }],
         });
 
-        render(<Orders />);
+        render(<AdminOrders />);
 
         await waitFor(() =>
           expect(screen.getByText("Success")).toBeInTheDocument()
@@ -353,7 +379,7 @@ describe("Orders Component - Unit Tests Only", () => {
           data: [{ ...baseOrder, payment: { success: false } }],
         });
 
-        render(<Orders />);
+        render(<AdminOrders />);
 
         await waitFor(() =>
           expect(screen.getByText("Failed")).toBeInTheDocument()
@@ -363,7 +389,7 @@ describe("Orders Component - Unit Tests Only", () => {
       it("should display 'Failed' when payment object is missing the success property", async () => {
         axios.get.mockResolvedValue({ data: [{ ...baseOrder, payment: {} }] });
 
-        render(<Orders />);
+        render(<AdminOrders />);
 
         await waitFor(() =>
           expect(screen.getByText("Failed")).toBeInTheDocument()
@@ -390,7 +416,7 @@ describe("Orders Component - Unit Tests Only", () => {
         // UNIT TEST: Verifies that products is counted as 0 if empty
         axios.get.mockResolvedValue({ data: [{ ...baseOrder, products: [] }] });
 
-        render(<Orders />);
+        render(<AdminOrders />);
 
         const quantityCell = await screen.findByRole("cell", { name: 0 });
         expect(quantityCell).toBeInTheDocument();
@@ -403,7 +429,7 @@ describe("Orders Component - Unit Tests Only", () => {
           data: [{ ...baseOrder, products }],
         });
 
-        render(<Orders />);
+        render(<AdminOrders />);
 
         const cells = await screen.findAllByRole("cell", { name: 1 });
 
@@ -421,7 +447,7 @@ describe("Orders Component - Unit Tests Only", () => {
         ];
         axios.get.mockResolvedValue({ data: [{ ...baseOrder, products }] });
 
-        render(<Orders />);
+        render(<AdminOrders />);
 
         const quantityCell = await screen.findByRole("cell", { name: 3 });
         expect(quantityCell).toBeInTheDocument();
@@ -623,7 +649,7 @@ describe("Orders Component - Unit Tests Only", () => {
       axios.get.mockResolvedValueOnce({ data: mockOrders });
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       // Component should render without any orders initially
       expect(screen.getByText("All Orders")).toBeInTheDocument();
@@ -635,15 +661,15 @@ describe("Orders Component - Unit Tests Only", () => {
       const mockSetAuth = jest.fn();
 
       mockUseAuth.mockReturnValue([null, mockSetAuth]);
-      const { rerender } = render(<Orders />);
+      const { rerender } = render(<AdminOrders />);
       expect(axios.get).not.toHaveBeenCalled(); // Assert only for initial state -  Verify no API call is made initially
 
       // Act: Rerender with a token, which triggers the useEffect
       mockUseAuth.mockReturnValue([
-        { token: "test-token", user: { name: "Test" } },
+        { token: "test-token", user: { name: "Test", role: 1 } },
         mockSetAuth,
       ]);
-      rerender(<Orders />);
+      rerender(<AdminOrders />);
 
       // Target assertion
       await waitFor(() => {
@@ -652,7 +678,7 @@ describe("Orders Component - Unit Tests Only", () => {
     });
 
     it("calls getOrders when auth token is present", async () => {
-      // UNIT TEST: Verifies that the getOrders API call is triggered when an auth token exists.
+      // UNIT TEST: Verifies that the correct getOrders API call is triggered when an auth token exists.
       const mockOrders = [
         {
           _id: "1",
@@ -665,14 +691,14 @@ describe("Orders Component - Unit Tests Only", () => {
       ];
       axios.get.mockResolvedValueOnce({ data: mockOrders });
       mockUseAuth.mockReturnValue([
-        { token: "valid-token", user: { name: "Test User" } },
+        { token: "valid-token", user: { name: "Test User", role: 1 } },
         jest.fn(),
       ]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       expect(axios.get).toHaveBeenCalledTimes(1);
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/orders");
+      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/all-orders");
       await waitFor(() => {
         expect(screen.getByText("Test")).toBeInTheDocument();
       });
@@ -680,9 +706,9 @@ describe("Orders Component - Unit Tests Only", () => {
 
     it("does not call getOrders when auth token is not present", () => {
       // UNIT TEST: Verifies that the getOrders API call is NOT triggered when no auth token is available.
-      mockUseAuth.mockReturnValue([{ user: { name: "Test User" } }, jest.fn()]);
+      mockUseAuth.mockReturnValue([{ user: { name: "Test User", role: 1 } }, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       expect(axios.get).not.toHaveBeenCalled();
     });
@@ -747,7 +773,7 @@ describe("Orders Component - Unit Tests Only", () => {
       axios.get.mockResolvedValueOnce({ data: [malformedOrder] });
       mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       await waitFor(() => {
         expect(screen.getByText("All Orders")).toBeInTheDocument(); // page did not crash
@@ -761,7 +787,7 @@ describe("Orders Component - Unit Tests Only", () => {
         .spyOn(console, "log")
         .mockImplementation(() => {});
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
@@ -769,7 +795,7 @@ describe("Orders Component - Unit Tests Only", () => {
       // The table should not be present
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
       expect(
-        screen.getByText("You haven't placed any orders yet.") // An empty state message should be shown as a fallback
+        screen.getByText("No orders yet.") // An empty state message should be shown as a fallback
       ).toBeInTheDocument();
 
       consoleSpy.mockRestore();
@@ -782,7 +808,7 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests component stability
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      const act = () => render(<Orders />);
+      const act = () => render(<AdminOrders />);
 
       expect(act).not.toThrow();
     });
@@ -791,7 +817,7 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests cleanup
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      const { unmount } = render(<Orders />);
+      const { unmount } = render(<AdminOrders />);
 
       expect(() => unmount()).not.toThrow();
     });
@@ -803,7 +829,7 @@ describe("Orders Component - Unit Tests Only", () => {
       mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
       const consoleErrorSpy = jest.spyOn(console, "error");
 
-      const { unmount } = render(<Orders />);
+      const { unmount } = render(<AdminOrders />);
       unmount();
       await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -819,7 +845,7 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests semantic HTML structure
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      render(<Orders />);
+      render(<AdminOrders />);
 
       const heading = screen.getByRole("heading", { level: 1 });
       expect(heading).toHaveTextContent("All Orders");
@@ -830,14 +856,114 @@ describe("Orders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests CSS class application logic
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
-      const { container } = render(<Orders />);
+      const { container } = render(<AdminOrders />);
 
-      expect(
-        container.querySelector(".container-fluid.p-3.m-3.dashboard")
-      ).toBeInTheDocument();
+      expect(container.querySelector(".row.dashboard")).toBeInTheDocument();
       expect(container.querySelector(".row")).toBeInTheDocument();
       expect(container.querySelector(".col-md-3")).toBeInTheDocument();
       expect(container.querySelector(".col-md-9")).toBeInTheDocument();
     });
   });
+
+  it("status change triggers PUT and refresh (covers lines 36–42 & 78)", async () => {
+    const { useAuth } = require("../../context/auth");
+    useAuth.mockReturnValue([
+      { token: "valid-token", user: { name: "Admin", role: 1 } },
+      jest.fn(),
+    ]);
+
+    const initialOrders = [
+      {
+        _id: "o1",
+        status: "Processing",
+        buyer: { name: "Buyer One" },
+        updatedAt: "2025-01-01T00:00:00.000Z",
+        payment: { success: true },
+        products: [],
+      },
+    ];
+    const refreshedOrders = [{ ...initialOrders[0], status: "Shipped" }];
+
+    axios.get
+      .mockResolvedValueOnce({ data: initialOrders })   // initial getOrders (useEffect)
+      .mockResolvedValueOnce({ data: refreshedOrders }); // getOrders called inside handleChange
+
+    axios.put.mockResolvedValueOnce({ data: { success: true } });
+
+    render(<AdminOrders />);
+
+    // Ensure initial row is rendered
+    await screen.findByText("Buyer One");
+
+    // Our Select mock exposes a listbox with data-default set to the current status
+    const statusListbox = screen.getByRole("listbox", { name: "order-status" });
+    expect(statusListbox).toHaveAttribute("data-default", "Processing");
+
+    // Click "Shipped" -> triggers Select onChange (line 78) and handleChange (36–42)
+    fireEvent.click(
+      within(statusListbox.parentElement).getByRole("button", { name: "Shipped" })
+    );
+
+    await waitFor(() => {
+      // PUT called with correct URL + payload (handleChange)
+      expect(axios.put).toHaveBeenCalledWith(
+        "/api/v1/auth/order-status/o1",
+        { status: "Shipped" }
+      );
+      // getOrders called again after PUT
+      expect(axios.get).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("status change error logs error and does not refresh orders (covers line 42 catch)", async () => {
+    const { useAuth } = require("../../context/auth");
+    useAuth.mockReturnValue([
+      { token: "valid-token", user: { name: "Admin", role: 1 } },
+      jest.fn(),
+    ]);
+
+    const initialOrders = [
+      {
+        _id: "o1",
+        status: "Processing",
+        buyer: { name: "Buyer One" },
+        updatedAt: "2025-01-01T00:00:00.000Z",
+        payment: { success: true },
+        products: [],
+      },
+    ];
+
+    // Initial load succeeds once
+    axios.get.mockResolvedValueOnce({ data: initialOrders });
+    // Status update fails -> hit catch on line 42
+    axios.put.mockRejectedValueOnce(new Error("network fail"));
+
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    render(<AdminOrders />);
+
+    // Wait for initial table render
+    await screen.findByText("Buyer One");
+
+    // Interact with the mocked <Select> (line 78 onChange)
+    const statusListbox = screen.getByRole("listbox", { name: "order-status" });
+    fireEvent.click(
+      within(statusListbox.parentElement).getByRole("button", { name: "Shipped" })
+    );
+
+    await waitFor(() => {
+      // PUT was attempted
+      expect(axios.put).toHaveBeenCalledWith(
+        "/api/v1/auth/order-status/o1",
+        { status: "Shipped" }
+      );
+      // catch {} ran -> console.log called (line 42)
+      expect(consoleSpy).toHaveBeenCalled();
+      // No refresh (getOrders) after failure
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    });
+
+    consoleSpy.mockRestore();
+  });
+
 });
