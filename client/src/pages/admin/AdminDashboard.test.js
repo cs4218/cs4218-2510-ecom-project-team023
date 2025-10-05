@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/extend-expect";

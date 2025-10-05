@@ -17,12 +17,18 @@ const CartPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  //total price
+// total price
   const totalPrice = () => {
     try {
       let total = 0;
       cart?.map((item) => {
-        total = total + item.price;
+        if (item.price === undefined || item.price === null) {
+          throw new Error(`Cart item ${item._id || 'unknown'} has missing price.`);
+        }
+        if (typeof item.price !== 'number' || !isFinite(item.price)) {
+          throw new Error(`Cart item ${item._id || 'unknown'} has non-numeric price: ${item.price}`);
+        }
+        total = total + item.price
       });
       return total.toLocaleString("en-US", {
         style: "currency",
@@ -61,6 +67,10 @@ const CartPage = () => {
   //handle payments
   const handlePayment = async () => {
     try {
+      if (!instance) {
+        console.log("No Braintree instance available.");
+        return;
+      }
       setLoading(true);
       const { nonce } = await instance.requestPaymentMethod();
       const { data } = await axios.post("/api/v1/product/braintree/payment", {
@@ -99,8 +109,8 @@ const CartPage = () => {
         <div className="container ">
           <div className="row ">
             <div className="col-md-7  p-0 m-0">
-              {cart?.map((p) => (
-                <div className="row card flex-row" key={p._id}>
+              {cart?.map((p, i) => (
+                <div className="row card flex-row" key={`${p._id}_${i}`}>
                   <div className="col-md-4">
                     <img
                       src={`/api/v1/product/product-photo/${p._id}`}
@@ -118,6 +128,7 @@ const CartPage = () => {
                   <div className="col-md-4 cart-remove-btn">
                     <button
                       className="btn btn-danger"
+                      data-testid={`${p._id}-remove-cart`}
                       onClick={() => removeCartItem(p._id)}
                     >
                       Remove
@@ -186,6 +197,7 @@ const CartPage = () => {
                       className="btn btn-primary"
                       onClick={handlePayment}
                       disabled={loading || !instance || !auth?.user?.address}
+                      data-testid="make-payment-btn"
                     >
                       {loading ? "Processing ...." : "Make Payment"}
                     </button>

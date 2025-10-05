@@ -1,6 +1,6 @@
 // Tests are written with the help of AI
 import React from "react";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import axios from "axios";
 import AdminOrders from "./AdminOrders";
@@ -41,6 +41,30 @@ jest.mock("react-router-dom", () => ({
     <div data-testid="memory-router">{children}</div>
   ),
 }));
+
+// Mock antd Select so we can click options and trigger onChange
+jest.mock("antd", () => {
+  const React = require("react");
+  const Select = ({ defaultValue, onChange, children }) => (
+    <div role="listbox" aria-label="order-status" data-default={defaultValue}>
+      <div data-testid="status-options">
+        {React.Children.map(children, (child) => {
+          if (!child) return null;
+          const { value, children: label } = child.props || {};
+          return (
+            <button type="button" onClick={() => onChange?.(value)}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+  const Option = ({ children }) => <>{children}</>;
+  Select.Option = Option;
+  return { __esModule: true, Select, Option };
+});
+
 
 // Mock window.matchMedia for responsive components;
 // To ensure test suite is robust and can handle potential dependencies
@@ -840,4 +864,106 @@ describe("AdminOrders Component - Unit Tests Only", () => {
       expect(container.querySelector(".col-md-9")).toBeInTheDocument();
     });
   });
+
+  it("status change triggers PUT and refresh (covers lines 36–42 & 78)", async () => {
+    const { useAuth } = require("../../context/auth");
+    useAuth.mockReturnValue([
+      { token: "valid-token", user: { name: "Admin", role: 1 } },
+      jest.fn(),
+    ]);
+
+    const initialOrders = [
+      {
+        _id: "o1",
+        status: "Processing",
+        buyer: { name: "Buyer One" },
+        updatedAt: "2025-01-01T00:00:00.000Z",
+        payment: { success: true },
+        products: [],
+      },
+    ];
+    const refreshedOrders = [{ ...initialOrders[0], status: "Shipped" }];
+
+    axios.get
+      .mockResolvedValueOnce({ data: initialOrders })   // initial getOrders (useEffect)
+      .mockResolvedValueOnce({ data: refreshedOrders }); // getOrders called inside handleChange
+
+    axios.put.mockResolvedValueOnce({ data: { success: true } });
+
+    render(<AdminOrders />);
+
+    // Ensure initial row is rendered
+    await screen.findByText("Buyer One");
+
+    // Our Select mock exposes a listbox with data-default set to the current status
+    const statusListbox = screen.getByRole("listbox", { name: "order-status" });
+    expect(statusListbox).toHaveAttribute("data-default", "Processing");
+
+    // Click "Shipped" -> triggers Select onChange (line 78) and handleChange (36–42)
+    fireEvent.click(
+      within(statusListbox.parentElement).getByRole("button", { name: "Shipped" })
+    );
+
+    await waitFor(() => {
+      // PUT called with correct URL + payload (handleChange)
+      expect(axios.put).toHaveBeenCalledWith(
+        "/api/v1/auth/order-status/o1",
+        { status: "Shipped" }
+      );
+      // getOrders called again after PUT
+      expect(axios.get).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("status change error logs error and does not refresh orders (covers line 42 catch)", async () => {
+    const { useAuth } = require("../../context/auth");
+    useAuth.mockReturnValue([
+      { token: "valid-token", user: { name: "Admin", role: 1 } },
+      jest.fn(),
+    ]);
+
+    const initialOrders = [
+      {
+        _id: "o1",
+        status: "Processing",
+        buyer: { name: "Buyer One" },
+        updatedAt: "2025-01-01T00:00:00.000Z",
+        payment: { success: true },
+        products: [],
+      },
+    ];
+
+    // Initial load succeeds once
+    axios.get.mockResolvedValueOnce({ data: initialOrders });
+    // Status update fails -> hit catch on line 42
+    axios.put.mockRejectedValueOnce(new Error("network fail"));
+
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    render(<AdminOrders />);
+
+    // Wait for initial table render
+    await screen.findByText("Buyer One");
+
+    // Interact with the mocked <Select> (line 78 onChange)
+    const statusListbox = screen.getByRole("listbox", { name: "order-status" });
+    fireEvent.click(
+      within(statusListbox.parentElement).getByRole("button", { name: "Shipped" })
+    );
+
+    await waitFor(() => {
+      // PUT was attempted
+      expect(axios.put).toHaveBeenCalledWith(
+        "/api/v1/auth/order-status/o1",
+        { status: "Shipped" }
+      );
+      // catch {} ran -> console.log called (line 42)
+      expect(consoleSpy).toHaveBeenCalled();
+      // No refresh (getOrders) after failure
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    });
+
+    consoleSpy.mockRestore();
+  });
+
 });
