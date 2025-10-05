@@ -565,7 +565,8 @@ describe("searchProductController", () => {
     );
   });
 
-    test("returns single product on exact name match", async () => {
+  // unit test
+  test("returns single product on exact name match", async () => {
       const product = [{ _id: "p1", name: "Mac Book Air" }];
       ProductModel.find.mockReturnValue({ select: () => Promise.resolve(product) });
       const res = makeRes();
