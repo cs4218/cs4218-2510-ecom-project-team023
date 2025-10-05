@@ -197,6 +197,7 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 #### Ryan
 | Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
 |----------|----------------------------------------|------------------------------|
-| *(To be filled)* | *(To be filled)* | *(To be filled)* |
+| **Admin Orders** |- `pages/admin/AdminOrders.js` | |
+| **Orders** |- `pages/user/Orders.js` | - `controllers/authController.js` <br> 1. `updateProfileController`<br> 2. `getOrdersController`<br> 3. `getAllOrdersController`<br> 4. `orderStatusController`<br> <br> - `models/orderModel.js` |
 
 ---
