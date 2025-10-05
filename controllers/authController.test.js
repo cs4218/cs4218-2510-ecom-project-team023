@@ -357,6 +357,67 @@ describe("Auth Controller Unit Tests", () => {
       );
     });
 
+    test("should reject newPassword shorter than 6 characters (5 chars)", async () => {
+      userModel.findOne.mockResolvedValue({ _id: "u1" });
+      mockReq.body = {
+        email: "example@email.com",
+        answer: "ans",
+        newPassword: "12345", // 5 chars
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.send).toHaveBeenCalledWith({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    });
+
+    test("should accept newPassword exactly 6 characters", async () => {
+      userModel.findOne.mockResolvedValue({ _id: "u1" });
+      hashPassword.mockResolvedValue("hashednew123");
+      userModel.findByIdAndUpdate.mockResolvedValue(true);
+      mockReq.body = {
+        email: "example@email.com",
+        answer: "ans",
+        newPassword: "123456", // 6 chars
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(hashPassword).toHaveBeenCalledWith("123456");
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Password Reset Successfully",
+        })
+      );
+    });
+
+    test("should accept newPassword longer than 6 characters (7 chars)", async () => {
+      userModel.findOne.mockResolvedValue({ _id: "u1" });
+      hashPassword.mockResolvedValue("hashednew123");
+      userModel.findByIdAndUpdate.mockResolvedValue(true);
+      mockReq.body = {
+        email: "example@example.com",
+        answer: "ans",
+        newPassword: "1234567", // 7 chars
+      };
+
+      await forgotPasswordController(mockReq, mockRes);
+
+      expect(hashPassword).toHaveBeenCalledWith("1234567");
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Password Reset Successfully",
+        })
+      );
+    });
+
     test("should handle errors gracefully", async () => {
       const error = new Error("Test error");
       userModel.findOne.mockRejectedValue(error);

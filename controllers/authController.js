@@ -73,7 +73,7 @@ export const registerController = async (req, res) => {
   } catch (error) {
     console.log(error);
     return res.status(500).send({
-      success: false, 
+      success: false,
       message: "Error while registering user",
       error,
     });
@@ -166,6 +166,14 @@ export const forgotPasswordController = async (req, res) => {
         message: "Wrong Email Or Answer",
       });
     }
+
+    if (newPassword.length < 6) {
+      return res.status(400).send({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
     const hashed = await hashPassword(newPassword);
     await userModel.findByIdAndUpdate(user._id, { password: hashed });
     return res.status(200).send({
