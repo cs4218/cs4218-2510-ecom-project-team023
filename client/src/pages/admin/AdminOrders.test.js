@@ -1,6 +1,13 @@
 // Tests are written with the help of AI
 import React from "react";
-import { render, screen, waitFor, cleanup, fireEvent, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import "@testing-library/jest-dom";
 import axios from "axios";
 import AdminOrders from "./AdminOrders";
@@ -65,7 +72,6 @@ jest.mock("antd", () => {
   return { __esModule: true, Select, Option };
 });
 
-
 // Mock window.matchMedia for responsive components;
 // To ensure test suite is robust and can handle potential dependencies
 // without unexpected crashes.
@@ -115,9 +121,7 @@ describe("AdminOrders Component - Unit Tests Only", () => {
 
       const { container } = render(<AdminOrders />);
 
-      expect(
-        container.querySelector(".row.dashboard")
-      ).toBeInTheDocument();
+      expect(container.querySelector(".row.dashboard")).toBeInTheDocument();
       expect(container.querySelector(".dashboard")).toBeInTheDocument();
       expect(container.querySelector(".row")).toBeInTheDocument();
       expect(container.querySelector(".col-md-3")).toBeInTheDocument();
@@ -128,16 +132,14 @@ describe("AdminOrders Component - Unit Tests Only", () => {
       // UNIT TEST: Tests rendering with empty orders array
       axios.get.mockResolvedValue({ data: [] });
       mockUseAuth.mockReturnValue([
-        { token: "test-token", user: { name: "Test", role: 1} },
+        { token: "test-token", user: { name: "Test", role: 1 } },
         jest.fn(),
       ]);
 
       render(<AdminOrders />);
 
       await waitFor(() => {
-        expect(
-          screen.getByText("No orders yet.")
-        ).toBeInTheDocument();
+        expect(screen.getByText("No orders yet.")).toBeInTheDocument();
       });
     });
   });
@@ -147,7 +149,10 @@ describe("AdminOrders Component - Unit Tests Only", () => {
     it("renders without calling useEffect when no auth token", () => {
       // UNIT TEST: Tests conditional logic for auth token
       const mockSetAuth = jest.fn();
-      mockUseAuth.mockReturnValue([{ user: { name: "Test", role: 1 } }, mockSetAuth]);
+      mockUseAuth.mockReturnValue([
+        { user: { name: "Test", role: 1 } },
+        mockSetAuth,
+      ]);
 
       render(<AdminOrders />);
 
@@ -201,8 +206,8 @@ describe("AdminOrders Component - Unit Tests Only", () => {
       ]);
     });
 
-    it("renders table headers with correctly, with correct capitalization", async () => {
-      // UNIT TEST: Verifies that the table headers are displayed with the correct capitalization.
+    it("renders table headers with correctly", async () => {
+      // UNIT TEST: Verifies that the table headers are displayed correctly (only once, correct capitalization).
       const mockOrders = [
         {
           _id: "order1",
@@ -226,6 +231,9 @@ describe("AdminOrders Component - Unit Tests Only", () => {
       render(<AdminOrders />);
 
       await waitFor(() => {
+        const headers = screen.getAllByRole("columnheader");
+        expect(headers).toHaveLength(6);
+        
         expect(
           screen.getByRole("columnheader", { name: "#" })
         ).toBeInTheDocument();
@@ -706,7 +714,10 @@ describe("AdminOrders Component - Unit Tests Only", () => {
 
     it("does not call getOrders when auth token is not present", () => {
       // UNIT TEST: Verifies that the getOrders API call is NOT triggered when no auth token is available.
-      mockUseAuth.mockReturnValue([{ user: { name: "Test User", role: 1 } }, jest.fn()]);
+      mockUseAuth.mockReturnValue([
+        { user: { name: "Test User", role: 1 } },
+        jest.fn(),
+      ]);
 
       render(<AdminOrders />);
 
@@ -885,7 +896,7 @@ describe("AdminOrders Component - Unit Tests Only", () => {
     const refreshedOrders = [{ ...initialOrders[0], status: "Shipped" }];
 
     axios.get
-      .mockResolvedValueOnce({ data: initialOrders })   // initial getOrders (useEffect)
+      .mockResolvedValueOnce({ data: initialOrders }) // initial getOrders (useEffect)
       .mockResolvedValueOnce({ data: refreshedOrders }); // getOrders called inside handleChange
 
     axios.put.mockResolvedValueOnce({ data: { success: true } });
@@ -901,15 +912,16 @@ describe("AdminOrders Component - Unit Tests Only", () => {
 
     // Click "Shipped" -> triggers Select onChange (line 78) and handleChange (36–42)
     fireEvent.click(
-      within(statusListbox.parentElement).getByRole("button", { name: "Shipped" })
+      within(statusListbox.parentElement).getByRole("button", {
+        name: "Shipped",
+      })
     );
 
     await waitFor(() => {
       // PUT called with correct URL + payload (handleChange)
-      expect(axios.put).toHaveBeenCalledWith(
-        "/api/v1/auth/order-status/o1",
-        { status: "Shipped" }
-      );
+      expect(axios.put).toHaveBeenCalledWith("/api/v1/auth/order-status/o1", {
+        status: "Shipped",
+      });
       // getOrders called again after PUT
       expect(axios.get).toHaveBeenCalledTimes(2);
     });
@@ -948,15 +960,16 @@ describe("AdminOrders Component - Unit Tests Only", () => {
     // Interact with the mocked <Select> (line 78 onChange)
     const statusListbox = screen.getByRole("listbox", { name: "order-status" });
     fireEvent.click(
-      within(statusListbox.parentElement).getByRole("button", { name: "Shipped" })
+      within(statusListbox.parentElement).getByRole("button", {
+        name: "Shipped",
+      })
     );
 
     await waitFor(() => {
       // PUT was attempted
-      expect(axios.put).toHaveBeenCalledWith(
-        "/api/v1/auth/order-status/o1",
-        { status: "Shipped" }
-      );
+      expect(axios.put).toHaveBeenCalledWith("/api/v1/auth/order-status/o1", {
+        status: "Shipped",
+      });
       // catch {} ran -> console.log called (line 42)
       expect(consoleSpy).toHaveBeenCalled();
       // No refresh (getOrders) after failure
@@ -965,5 +978,4 @@ describe("AdminOrders Component - Unit Tests Only", () => {
 
     consoleSpy.mockRestore();
   });
-
 });
