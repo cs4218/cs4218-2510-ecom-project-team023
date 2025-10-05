@@ -157,10 +157,13 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 
 ### 2. Members’ Contributions  
 
-#### Helin
-| Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
-|----------|----------------------------------------|------------------------------|
-| *(To be filled)* | *(To be filled)* | *(To be filled)* |
+#### **Helin**
+| Feature                 | Client Related Files (`/client/src/`)                                                 | Server Related Files (`./`) |
+|-----------------------------|--------------------------------------------------------------------------------------------|---------------------------------|
+| **Login + Registration**    | `pages/Auth/Login.js`<br>`pages/Auth/Register.js`<br>`pages/Auth/ForgotPassword.js`        | `controllers/authController.js`<br> • registerController<br> • loginController<br> • forgotPasswordController<br> • testController |
+| **User Profile Management** | `pages/User/Profile.js`                                                                   |  |
+| **Protected Routes**        | `context/Auth.js`<br>`components/Routes/PrivateRoute.js`<br>`components/Routes/AdminRoute.js` | `helpers/authHelper.js`<br>`middlewares/authMiddleware.js` |
+
 
 ---
 
