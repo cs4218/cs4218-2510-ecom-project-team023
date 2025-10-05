@@ -182,7 +182,9 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 #### Dinghao
 | Feature | Client Related Files (`/client/src/`) | Server Related Files (`./`) |
 |----------|----------------------------------------|------------------------------|
-| *(To be filled)* | *(To be filled)* | *(To be filled)* |
+| **Cart** | - `pages/CartPage.js` </br> - `context/cart.js` | NA (handled by team members) |
+| **Search** | - `pages/Search.js` </br> - `context/search.js` </br> - `component/Form/SearchInput.js` | - `controllers/productController.js` </br> 1.`searchProductController` |
+| **AdminUsers** | - `pages/admin/Users.js` | - `controllers/authController.js` </br> 1. `getAllUsersController` |
 
 ---
 
