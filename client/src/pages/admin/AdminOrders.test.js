@@ -414,7 +414,7 @@ describe("AdminOrders Component - Unit Tests Only", () => {
         expect(cells[1]).toBeInTheDocument();
       });
 
-      it("should display quantity 3 for multiple products in array", async () => {
+      it("should display the appropriate quantity for products in the array", async () => {
         // UNIT TEST: Verifies that the count is for elements within the array
         const products = [
           { ...fakeProduct, _id: "prod1" },
