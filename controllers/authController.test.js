@@ -8,6 +8,7 @@ import {
   getOrdersController,
   getAllOrdersController,
   orderStatusController,
+  getAllUsersController
 } from "./authController.js";
 import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
@@ -749,5 +750,180 @@ describe("Auth Controller Unit Tests", () => {
       expect(consoleSpy).toHaveBeenCalledWith(error);
       consoleSpy.mockRestore();
     });
+  });
+});
+
+describe("getAllUsersController Unit Tests", () => {
+  let req, res;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    req = {
+      query: {},
+    };
+    res = {
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    };
+  });
+
+  // --- EP & BVA: Normal success path ---
+  it("should fetch users with default pagination (page=1, limit=10) successfully", async () => {
+    const mockUsers = Array.from({ length: 10 }, (_, i) => ({
+      _id: `user${i + 1}`,
+      name: `User ${i + 1}`,
+      email: `user${i + 1}@example.com`,
+      createdAt: new Date(),
+    }));
+
+    userModel.countDocuments.mockResolvedValue(25);
+    userModel.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockResolvedValue(mockUsers),
+    });
+
+    await getAllUsersController(req, res);
+
+    expect(userModel.countDocuments).toHaveBeenCalledWith({});
+    expect(userModel.find).toHaveBeenCalledWith({});
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      message: "Paginated users list fetched successfully",
+      users: mockUsers,
+      currentPage: 1,
+      totalPages: 3,
+      totalUsers: 25,
+      limit: 10,
+    });
+  });
+
+  // --- BVA: Page 1 boundary ---
+  it("should handle first page correctly", async () => {
+    req.query.page = "1";
+    req.query.limit = "5";
+
+    const mockUsers = Array.from({ length: 5 }, (_, i) => ({ _id: `u${i+1}` }));
+
+    userModel.countDocuments.mockResolvedValue(12);
+    userModel.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockResolvedValue(mockUsers),
+    });
+
+    await getAllUsersController(req, res);
+
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({ currentPage: 1, totalPages: 3, limit: 5 })
+    );
+  });
+
+  // --- BVA: Last page boundary ---
+  it("should handle last page with remaining users correctly", async () => {
+    req.query.page = "3";
+    req.query.limit = "5";
+
+    const mockUsers = Array.from({ length: 2 }, (_, i) => ({ _id: `u${i+11}` })); // last 2 users
+
+    userModel.countDocuments.mockResolvedValue(12);
+    userModel.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockResolvedValue(mockUsers),
+    });
+
+    await getAllUsersController(req, res);
+
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({ currentPage: 3, totalPages: 3, users: mockUsers })
+    );
+  });
+
+  // --- EP: Arbitrary page and limit ---
+  it("should handle arbitrary page and limit correctly", async () => {
+    req.query.page = "2";
+    req.query.limit = "4";
+
+    const mockUsers = Array.from({ length: 4 }, (_, i) => ({ _id: `u${i+5}` }));
+
+    userModel.countDocuments.mockResolvedValue(10);
+    userModel.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockResolvedValue(mockUsers),
+    });
+
+    await getAllUsersController(req, res);
+
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({ currentPage: 2, totalPages: 3, users: mockUsers, limit: 4 })
+    );
+  });
+
+  // --- BVA: page and limit missing or invalid values ---
+  it("should default to page=1 and limit=10 if query params are missing or invalid", async () => {
+    req.query.page = "invalid";
+    req.query.limit = "invalid";
+
+    const mockUsers = Array.from({ length: 10 }, (_, i) => ({ _id: `user${i+1}` }));
+
+    userModel.countDocuments.mockResolvedValue(20);
+    userModel.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockResolvedValue(mockUsers),
+    });
+
+    await getAllUsersController(req, res);
+
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({ currentPage: 1, limit: 10, totalPages: 2 })
+    );
+  });
+
+  // --- Error Handling ---
+  it("should return 500 and error message if database fails", async () => {
+    const error = new Error("DB failure");
+    userModel.countDocuments.mockRejectedValue(error);
+
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    await getAllUsersController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        message: "Error while getting all users with pagination",
+        error: "DB failure",
+      })
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(error);
+
+    consoleSpy.mockRestore();
+  });
+
+  // --- EP: Empty result set ---
+  it("should return empty users array if no users exist", async () => {
+    userModel.countDocuments.mockResolvedValue(0);
+    userModel.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockResolvedValue([]),
+    });
+
+    await getAllUsersController(req, res);
+
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({ users: [], totalUsers: 0, totalPages: 0 })
+    );
   });
 });
