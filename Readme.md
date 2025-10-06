@@ -149,7 +149,7 @@ To begin unit testing with Jest in your project, follow these steps:
 
 ### 1. CI GitHub Workflow  
 
-[View our CI Workflow on GitHub Actions]([https://github.com/cs4218/cs4218-2510-ecom-project-team023/actions](https://github.com/cs4218/cs4218-2510-ecom-project-team023/actions/runs/18263564828/job/51994760867))
+[View our CI Workflow on GitHub Actions](https://github.com/cs4218/cs4218-2510-ecom-project-team023/actions/runs/18263564828/job/51994760867)
 
 Our Continuous Integration (CI) pipeline ensures that every commit and pull request triggers automated tests and linting. This guarantees that only code passing all checks is merged into the main branch, maintaining consistent code quality and project stability.
 
