@@ -20,7 +20,7 @@ import formidable from "express-formidable";
 
 const router = express.Router();
 
-//routes
+// Create product (ADMIN)
 router.post(
   "/create-product",
   requireSignIn,
@@ -28,7 +28,8 @@ router.post(
   formidable(),
   createProductController
 );
-//routes
+
+// Update product (ADMIN)
 router.put(
   "/update-product/:pid",
   requireSignIn,
@@ -37,41 +38,43 @@ router.put(
   updateProductController
 );
 
-//get products
+// Get products (PUBLIC)
 router.get("/get-product", getProductController);
 
-//single product
+// Get single product by slug (PUBLIC)
 router.get("/get-product/:slug", getSingleProductController);
 
-//get photo
+// Get product photo (PUBLIC)
 router.get("/product-photo/:pid", productPhotoController);
 
-//delete rproduct
-router.delete("/delete-product/:pid", deleteProductController);
+// Delete product (ADMIN)  ⬅️ added isAdmin + requireSignIn
+router.delete(
+  "/delete-product/:pid",
+  requireSignIn,
+  isAdmin,
+  deleteProductController
+);
 
-//filter product
+// Product filters (PUBLIC)
 router.post("/product-filters", productFiltersController);
 
-//product count
+// Product count (PUBLIC)
 router.get("/product-count", productCountController);
 
-//product per page
+// Product list by page (PUBLIC)
 router.get("/product-list/:page", productListController);
 
-//search product
+// Search product (PUBLIC)
 router.get("/search/:keyword", searchProductController);
 
-//similar product
+// Related product (PUBLIC)
 router.get("/related-product/:pid/:cid", realtedProductController);
 
-//category wise product
+// Category-wise product (PUBLIC)
 router.get("/product-category/:slug", productCategoryController);
 
-//payments routes
-//token
-router.get("/braintree/token", braintreeTokenController);
-
-//payments
-router.post("/braintree/payment", requireSignIn, brainTreePaymentController);
+// Payments
+router.get("/braintree/token", braintreeTokenController); // PUBLIC for client token
+router.post("/braintree/payment", requireSignIn, brainTreePaymentController); // user checkout
 
 export default router;
