@@ -92,45 +92,67 @@ export const getProductController = async (req, res) => {
 // get single product
 export const getSingleProductController = async (req, res) => {
   try {
-    const product = await productModel
-      .findOne({ slug: req.params.slug })
-      .select("-photo")
-      .populate("category");
-    res.status(200).send({
+    const { slug } = req.params;
+    const product = await Product.findOne({ slug })
+      .populate("category")
+      .select("-photo");
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    return res.status(200).json({
       success: true,
-      message: "Single Product Fetched",
       product,
     });
-  } catch (error) {
-    res.status(500).send({
+  } catch (err) {
+    return res.status(500).json({
       success: false,
-      message: "Eror while getitng single product",
-      error,
+      message: "Error fetching product",
+      error: err.message,
     });
   }
 };
 
 // get photo
+import mongoose from "mongoose";
+import Product from "../models/productModel.js";
+
 export const productPhotoController = async (req, res) => {
   try {
-    const product = await productModel.findById(req.params.pid).select("photo");
-    if (product?.photo?.data) {
-      res.set("Content-Type", product.photo.contentType);
-      return res.status(200).send(product.photo.data);
+    const { pid } = req.params;
+
+    // Guard against malformed ObjectId
+    if (!mongoose.Types.ObjectId.isValid(pid)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product id",
+      });
     }
-    // regression: 404 when no photo
-    return res.status(404).send({
+
+    const product = await Product.findById(pid).select("photo");
+
+    if (!product || !product.photo || !product.photo.data) {
+      return res.status(404).json({
+        success: false,
+        message: "Photo not found",
+      });
+    }
+
+    res.set("Content-Type", product.photo.contentType || "application/octet-stream");
+    return res.status(200).send(product.photo.data);
+  } catch (err) {
+    return res.status(500).json({
       success: false,
-      message: "Photo not found",
-    });
-  } catch (error) {
-    res.status(500).send({
-      success: false,
-      message: "Erorr while getting photo",
-      error,
+      message: "Error retrieving photo",
+      error: err.message,
     });
   }
 };
+
 
 // delete controller
 export const deleteProductController = async (req, res) => {
