@@ -5,6 +5,12 @@ export default {
   // when testing backend
   testEnvironment: "node",
 
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    ".*\\.int\\.test\\.(js|jsx|ts|tsx)$",
+    ".*\\.crud\\.int\\.test\\.(js|jsx|ts|tsx)$",
+  ],
+  
   // which test to run
   testMatch: ["<rootDir>/!(client)/**/*.test.js"],
 

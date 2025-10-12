@@ -22,6 +22,12 @@ export default {
   // run all test files ending with .test.js or .test.jsx or .test.ts/tsx inside client/src
   testMatch: ["<rootDir>/client/src/!(_*)/**/*.test.[jt]s?(x)"],
 
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    ".*\\.int\\.test\\.(js|jsx|ts|tsx)$",
+    ".*\\.crud\\.int\\.test\\.(js|jsx|ts|tsx)$",
+  ],
+  
   // jest code coverage
   collectCoverage: true,
   collectCoverageFrom: ["client/src/!(_*)/**", "!client/src/**/*.test.js"],
