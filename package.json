@@ -13,7 +13,9 @@
     "test:int": "NODE_ENV=test jest -c jest.int.config.cjs --runInBand --detectOpenHandles",
     "test:frontend:int": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.int.config.js",
     "test:frontend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
-    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js"
+    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js",
+    "test:e2e": "NODE_ENV=test playwright test",
+    "test:e2e:ui": "NODE_ENV=test playwright test --ui"
   },
   "keywords": [],
   "author": "RP",
@@ -42,7 +44,7 @@
     "@babel/preset-env": "^7.28.3",
     "@babel/preset-react": "^7.27.1",
     "@eslint/js": "^9.34.0",
-    "@playwright/test": "^1.44.0",
+    "@playwright/test": "^1.56.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.12.12",
     "babel-jest": "^29.7.0",
@@ -57,4 +59,5 @@
     "supertest": "^7.1.4",
     "typescript-eslint": "^8.41.0"
   }
+  
 }

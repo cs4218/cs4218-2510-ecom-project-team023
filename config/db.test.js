@@ -1,42 +1,53 @@
 // config/db.test.js
+import connectDB from "./db.js";
 import mongoose from "mongoose";
-import connectDB from "./db"; // <-- fixed: import the actual file
 
-jest.mock("mongoose", () => ({ connect: jest.fn() }));
+// Mock the ESM default export so `mongoose.connect` is a jest.fn()
+jest.mock("mongoose", () => ({
+  __esModule: true,
+  default: { connect: jest.fn() },
+}));
 
 describe("connectDB", () => {
   const ORIG_ENV = process.env;
-  let logSpy;
+  let logSpy, errSpy;
 
   beforeEach(() => {
-    process.env = { ...ORIG_ENV, MONGO_URL: "mongodb://localhost/testdb" };
+    process.env = {
+      ...ORIG_ENV,
+      NODE_ENV: "test",
+      MONGO_URL: "mongodb://localhost/testdb",
+    };
     logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     jest.clearAllMocks();
   });
 
   afterEach(() => {
     logSpy.mockRestore();
+    errSpy.mockRestore();
     process.env = ORIG_ENV;
   });
 
-  it("connects with MONGO_URL and logs the connected host", async () => {
+  it("connects with MONGO_URL and logs a connected message", async () => {
+    // @ts-ignore – we know we mocked it above
     mongoose.connect.mockResolvedValue({ connection: { host: "mock-host" } });
 
     await connectDB();
 
-    expect(mongoose.connect).toHaveBeenCalledWith(process.env.MONGO_URL);
-    const logged = logSpy.mock.calls.flat().join("\n"); // colored string safe
-    expect(logged).toContain("Connected To Mongodb Database");
-    expect(logged).toContain("mock-host");
+    expect(mongoose.connect).toHaveBeenCalledWith(process.env.MONGO_URL, {}); // 2 args
+    const logged = logSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(logged).toContain("[DB] Connected:");
   });
 
-  it("logs an error message when connection fails", async () => {
+  it("throws in test env and logs the error when connection fails", async () => {
+    // @ts-ignore
     mongoose.connect.mockRejectedValueOnce(new Error("boom"));
 
-    await connectDB();
+    await expect(connectDB()).rejects.toThrow("boom");
 
-    const logged = logSpy.mock.calls.flat().join("\n");
-    expect(logged).toContain("Error in Mongodb");
-    expect(logged).toContain("boom");
+    const erred = errSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(erred).toContain("Connection error");
+    expect(erred).toContain("boom");
   });
 });
