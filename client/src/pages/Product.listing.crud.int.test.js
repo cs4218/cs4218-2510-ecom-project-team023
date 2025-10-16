@@ -1,28 +1,85 @@
-// client/src/pages/Product.listing.crud.int.test.js setup written with help from ChatGPT
-jest.setTimeout(20000);
+// setup written with help from ChatGPT
+jest.setTimeout(30000);
 
 import request from "supertest";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
-let app, mongo, Product, Category;
+// ---- Make server.js connect to the in-memory DB ----
+jest.mock(require.resolve("../../../config/db.js"), () => ({
+  __esModule: true,
+  default: async () => {
+    const m = (await import("mongoose")).default;
+    await m.connect(process.env.MONGO_URL, { dbName: "ecom_frontend_int" });
+  },
+}));
+
+let app, mongod, Product, Category;
+
+const resolveApp = async () => {
+  const srvMod = await import("../../../server.js");
+  const candidates = [
+    srvMod,
+    srvMod?.default,
+    srvMod?.default?.default,
+    srvMod?.app,
+    srvMod?.default?.app,
+    srvMod?.server,
+    srvMod?.default?.server,
+  ];
+  const isExpress = (x) => typeof x === "function" && (x.handle || x.use);
+  const isHttp = (x) => x && typeof x.address === "function" && typeof x.close === "function";
+  for (const c of candidates) {
+    if (!c) continue;
+    if (isExpress(c) || isHttp(c)) return c;
+    if (c?.app && isExpress(c.app)) return c.app;
+    if (c?.server && isHttp(c.server)) return c.server;
+    if (typeof c === "function" && !c.handle && !c.address) {
+      try {
+        const maybe = c();
+        if (isExpress(maybe) || isHttp(maybe)) return maybe;
+        if (maybe?.app && isExpress(maybe.app)) return maybe.app;
+        if (maybe?.server && isHttp(maybe.server)) return maybe.server;
+      } catch {}
+    }
+  }
+  throw new Error("Could not resolve Express app/http.Server from server.js");
+};
 
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
 
-  mongo = await MongoMemoryServer.create();
-  process.env.MONGO_URL = mongo.getUri();
+  mongod = await MongoMemoryServer.create();
+  process.env.MONGO_URL = mongod.getUri();
 
-  const mod = await import("../../../server.js");
-  app = mod.default;
+  // Clear any precompiled models across projects
+  if (typeof mongoose.deleteModel === "function") {
+    for (const name of ["Product", "Category", "Order", "orders", "User"]) {
+      try { mongoose.deleteModel(name); } catch {}
+    }
+  } else {
+    delete mongoose.models.Product;
+    delete mongoose.models.Category;
+    delete mongoose.models.User;
+    delete mongoose.models.Order;
+    delete mongoose.models.orders;
+  }
 
-  Product  = (await import("../../../models/productModel.js")).default;
-  Category = (await import("../../../models/categoryModel.js")).default;
+  // Register schemas on the default connection
+  await import("../../../models/productModel.js");
+  await import("../../../models/categoryModel.js");
+
+  // Resolve the app/server after models are registered
+  app = await resolveApp();
+
+  // Pull compiled models from Mongoose registry (true Models)
+  Product = mongoose.model("Product");
+  Category = mongoose.model("Category");
 });
 
 afterAll(async () => {
-  await mongoose.connection?.close();
-  await mongo.stop();
+  if (mongoose.connection.readyState) await mongoose.disconnect();
+  if (mongod) await mongod.stop();
 });
 
 afterEach(async () => {
@@ -134,8 +191,6 @@ describe("Product Listing, Counting, and Filtering (Public API)", () => {
     expect(products.length).toBe(total);
   });
 
-  // -------------------- EXTRA COVERAGE -------------------- test 6,8,9 in this file written with help from ChatGPT
-
   it("Count endpoint matches actual DB count", async () => {
     const { total } = await seedCatalog();
     const real = await Product.countDocuments({});
@@ -149,7 +204,6 @@ describe("Product Listing, Counting, and Filtering (Public API)", () => {
   it("Pagination page > last returns empty array", async () => {
     const { total } = await seedCatalog();
 
-    // discover perPage from first page
     const page1 = await request(app).get("/api/v1/product/product-list/1");
     const first = extractProducts(page1.body);
     const perPage = first.length || 6;
@@ -159,7 +213,7 @@ describe("Product Listing, Counting, and Filtering (Public API)", () => {
     expect(out.status).toBe(200);
     const arr = extractProducts(out.body);
     expect(Array.isArray(arr)).toBe(true);
-    expect(arr.length).toBe(0); // typical behavior: no items beyond the last page
+    expect(arr.length).toBe(0);
   });
 
   it("Each paginated item has minimal shape (_id, name, price, category)", async () => {

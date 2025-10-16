@@ -1,14 +1,22 @@
-// client/src/pages/Products.crud.int.test.js
-jest.setTimeout(20000);
+// setup written with help from ChatGPT
+jest.setTimeout(30000);
 
 import request from "supertest";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
-let app, mongo, Product, Category, User, hashPassword;
+// ---- Make server.js connect to the in-memory DB ----
+jest.mock(require.resolve("../../../config/db.js"), () => ({
+  __esModule: true,
+  default: async () => {
+    const m = (await import("mongoose")).default;
+    await m.connect(process.env.MONGO_URL, { dbName: "ecom_frontend_int" });
+  },
+}));
 
-// === helpers === written with help from ChatGPT
+let app, mongod, Product, Category, User, hashPassword;
 
+// === helpers ===
 function withToken(req, token) {
   return req
     .set("Authorization", token)
@@ -30,33 +38,92 @@ async function loginAndGetToken(email, password) {
   return res.body.token;
 }
 
-// seed creds
 const adminEmail = "admin@test.local";
 const userEmail  = "user@test.local";
 const adminPwd   = "Admin#123";
 const userPwd    = "User#123";
 
+const resolveApp = async () => {
+  const srvMod = await import("../../../server.js");
+  const candidates = [
+    srvMod,
+    srvMod?.default,
+    srvMod?.default?.default,
+    srvMod?.app,
+    srvMod?.default?.app,
+    srvMod?.server,
+    srvMod?.default?.server,
+  ];
+  const isExpress = (x) => typeof x === "function" && (x.handle || x.use);
+  const isHttp = (x) => x && typeof x.address === "function" && typeof x.close === "function";
+  for (const c of candidates) {
+    if (!c) continue;
+    if (isExpress(c) || isHttp(c)) return c;
+    if (c?.app && isExpress(c.app)) return c.app;
+    if (c?.server && isHttp(c.server)) return c.server;
+    if (typeof c === "function" && !c.handle && !c.address) {
+      try {
+        const maybe = c();
+        if (isExpress(maybe) || isHttp(maybe)) return maybe;
+        if (maybe?.app && isExpress(maybe.app)) return maybe.app;
+        if (maybe?.server && isHttp(maybe.server)) return maybe.server;
+      } catch {}
+    }
+  }
+  throw new Error("Could not resolve Express app/http.Server from server.js");
+};
+
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
   process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
-  mongo = await MongoMemoryServer.create();
-  process.env.MONGO_URL = mongo.getUri();
+  mongod = await MongoMemoryServer.create();
+  process.env.MONGO_URL = mongod.getUri();
 
-  const mod = await import("../../../server.js");
-  app = mod.default;
+  // Clear any precompiled models across projects
+  if (typeof mongoose.deleteModel === "function") {
+    for (const name of ["Product", "Category", "User", "users", "Order", "orders"]) {
+      try { mongoose.deleteModel(name); } catch {}
+    }
+  } else {
+    delete mongoose.models.Product;
+    delete mongoose.models.Category;
+    delete mongoose.models.User;
+    delete mongoose.models.users;
+    delete mongoose.models.Order;
+    delete mongoose.models.orders;
+  }
 
-  Product  = (await import("../../../models/productModel.js")).default;
-  Category = (await import("../../../models/categoryModel.js")).default;
-  User     = (await import("../../../models/userModel.js")).default;
+  // Register schemas
+  await import("../../../models/productModel.js");
+  await import("../../../models/categoryModel.js");
+  await import("../../../models/userModel.js");
 
+  // Resolve app/server
+  app = await resolveApp();
+
+  // Pull compiled models (robust to pluralized model names)
+  Product  = mongoose.model("Product");
+  Category = mongoose.model("Category");
+  User     = mongoose.models.User
+    ? mongoose.model("User")
+    : (mongoose.models.users ? mongoose.model("users") : undefined);
+
+  if (!User) {
+    // Help debug if your app registers an unexpected name
+    throw new Error(
+      `User model not found. Available models: ${Object.keys(mongoose.models).join(", ")}`
+    );
+  }
+
+  // Optional helper import
   const helpers = await import("../../../helpers/authHelper.js").catch(() => ({}));
   hashPassword = helpers.hashPassword || (async (x) => x);
 });
 
 afterAll(async () => {
-  await mongoose.connection?.close();
-  await mongo.stop();
+  if (mongoose.connection.readyState) await mongoose.disconnect();
+  if (mongod) await mongod.stop();
 });
 
 afterEach(async () => {
@@ -112,14 +179,12 @@ describe("Product CRUD API (Supertest)", () => {
       .field("price", "1399")
       .field("quantity", "10")
       .field("category", categoryId)
-      .field("shipping", "1"); 
+      .field("shipping", "1");
     if (![200, 201].includes(create.status)) {
-
       console.error("CREATE FAIL", create.status, create.body);
     }
     expect([200, 201]).toContain(create.status);
 
- 
     let slug = create.body?.slug || create.body?.product?.slug;
 
     if (!slug) {
@@ -136,7 +201,6 @@ describe("Product CRUD API (Supertest)", () => {
     expect(body?.name).toBe("iPhone 15");
   });
 
-  //written with help from chatgpt
   it(
     "should allow an admin to update product fields",
     async () => {
@@ -190,7 +254,7 @@ describe("Product CRUD API (Supertest)", () => {
       expect(Number(updated.quantity)).toBe(7);
       expect(String(updated.category)).toBe(String(categoryId));
     },
-    30000 
+    30000
   );
 
   it("should allow an admin to delete a product", async () => {

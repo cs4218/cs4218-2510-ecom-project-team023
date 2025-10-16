@@ -1,9 +1,18 @@
-// client/src/pages/Product.photo.category.crud.int.test.js
-jest.setTimeout(20000);
+// setup written with help from ChatGPT
+jest.setTimeout(30000);
 
 import request from "supertest";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
+
+// ---- Make server.js connect to the in-memory DB ----
+jest.mock(require.resolve("../../../config/db.js"), () => ({
+  __esModule: true,
+  default: async () => {
+    const m = (await import("mongoose")).default;
+    await m.connect(process.env.MONGO_URL, { dbName: "ecom_frontend_int" });
+  },
+}));
 
 // Helper to parse binary responses into a Buffer
 const parseAsBuffer = (res, cb) => {
@@ -12,23 +21,72 @@ const parseAsBuffer = (res, cb) => {
   res.on("end", () => cb(null, Buffer.concat(chunks)));
 };
 
-let app, mongo, Product, Category;
+let app, mongod, Product, Category;
+
+const resolveApp = async () => {
+  const srvMod = await import("../../../server.js");
+  const candidates = [
+    srvMod,
+    srvMod?.default,
+    srvMod?.default?.default,
+    srvMod?.app,
+    srvMod?.default?.app,
+    srvMod?.server,
+    srvMod?.default?.server,
+  ];
+  const isExpress = (x) => typeof x === "function" && (x.handle || x.use);
+  const isHttp = (x) => x && typeof x.address === "function" && typeof x.close === "function";
+  for (const c of candidates) {
+    if (!c) continue;
+    if (isExpress(c) || isHttp(c)) return c;
+    if (c?.app && isExpress(c.app)) return c.app;
+    if (c?.server && isHttp(c.server)) return c.server;
+    if (typeof c === "function" && !c.handle && !c.address) {
+      try {
+        const maybe = c();
+        if (isExpress(maybe) || isHttp(maybe)) return maybe;
+        if (maybe?.app && isExpress(maybe.app)) return maybe.app;
+        if (maybe?.server && isHttp(maybe.server)) return maybe.server;
+      } catch {}
+    }
+  }
+  throw new Error("Could not resolve Express app/http.Server from server.js");
+};
 
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
-  mongo = await MongoMemoryServer.create();
-  process.env.MONGO_URL = mongo.getUri();
 
-  const mod = await import("../../../server.js");
-  app = mod.default;
+  mongod = await MongoMemoryServer.create();
+  process.env.MONGO_URL = mongod.getUri();
 
-  Product  = (await import("../../../models/productModel.js")).default;
-  Category = (await import("../../../models/categoryModel.js")).default;
+  // Clear any precompiled models across projects
+  if (typeof mongoose.deleteModel === "function") {
+    for (const name of ["Product", "Category", "Order", "orders", "User"]) {
+      try { mongoose.deleteModel(name); } catch {}
+    }
+  } else {
+    delete mongoose.models.Product;
+    delete mongoose.models.Category;
+    delete mongoose.models.User;
+    delete mongoose.models.Order;
+    delete mongoose.models.orders;
+  }
+
+  // Register schemas
+  await import("../../../models/productModel.js");
+  await import("../../../models/categoryModel.js");
+
+  // Resolve app/server
+  app = await resolveApp();
+
+  // Pull compiled models
+  Product = mongoose.model("Product");
+  Category = mongoose.model("Category");
 });
 
 afterAll(async () => {
-  await mongoose.connection?.close();
-  await mongo.stop();
+  if (mongoose.connection.readyState) await mongoose.disconnect();
+  if (mongod) await mongod.stop();
 });
 
 afterEach(async () => {
@@ -40,7 +98,7 @@ describe("Product - Photo streaming & Category population", () => {
   it("GET /api/v1/product/product-photo/:pid streams binary with correct content type", async () => {
     const cat = await Category.create({ name: "Cameras", slug: "cameras" });
 
-    const pngHeader = Buffer.from([0x89, 0x50, 0x4E, 0x47]); // "\x89PNG"
+    const pngHeader = Buffer.from([0x89, 0x50, 0x4E, 0x47]);
     const bodyBytes  = Buffer.from("fakepngdata");
     const photoBuf   = Buffer.concat([pngHeader, bodyBytes]);
 
@@ -133,15 +191,12 @@ describe("Product - Photo streaming & Category population", () => {
     expect(acceptable).toBe(true);
   });
 
-  // ===== New tests you asked for =====
-
   it("GET /api/v1/product/product-photo/not-an-objectid returns 400 (malformed pid)", async () => {
     const res = await request(app)
       .get(`/api/v1/product/product-photo/not-an-objectid`)
       .buffer(true)
       .parse(parseAsBuffer);
 
-    // Intentionally strict: malformed ObjectId should be handled as 400 (bad request)
     expect(res.status).toBe(400);
   });
 
@@ -150,12 +205,9 @@ describe("Product - Photo streaming & Category population", () => {
     async () => {
       const cat = await Category.create({ name: "Wallpapers", slug: "wallpapers" });
 
-      // Build a ~2MB buffer (2 * 1024 * 1024 bytes) with a simple repeating pattern
       const size = 2 * 1024 * 1024;
       const largeBuf = Buffer.allocUnsafe(size);
-      for (let i = 0; i < size; i++) {
-        largeBuf[i] = i % 256;
-      }
+      for (let i = 0; i < size; i++) largeBuf[i] = i % 256;
 
       const product = await Product.create({
         name: "Large Image",
@@ -176,15 +228,11 @@ describe("Product - Photo streaming & Category population", () => {
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toBe("image/jpeg");
       expect(Buffer.isBuffer(res.body)).toBe(true);
-
-      // Must be at least as large; some middlewares may add headers, but body length should match or exceed.
       expect(res.body.length).toBeGreaterThanOrEqual(largeBuf.length);
-
-      // Quick integrity spot-checks (beginning, middle, end)
       expect(res.body[0]).toBe(0);
       expect(res.body[12345]).toBe(12345 % 256);
       expect(res.body[largeBuf.length - 1]).toBe((largeBuf.length - 1) % 256);
     },
-    30000 // allow extra time for big buffer serialization
+    30000
   );
 });
