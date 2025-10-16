@@ -245,12 +245,15 @@ export const getOrdersController = async (req, res) => {
       .find({ buyer: req.user._id })
       .populate("products", "-photo")
       .populate("buyer", "name");
-    return res.json(orders);
+    return res.json({
+      success: true,
+      orders
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).send({
       success: false,
-      message: "Error WHile Geting Orders",
+      message: "Error While Getting Orders",
       error,
     });
   }
@@ -263,12 +266,15 @@ export const getAllOrdersController = async (req, res) => {
       .populate("products", "-photo")
       .populate("buyer", "name")
       .sort({ createdAt: -1 });
-    return res.json(orders);
+    return res.json({
+      success: true,
+      orders
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).send({
       success: false,
-      message: "Error WHile Geting Orders",
+      message: "Error While Getting Orders",
       error,
     });
   }
@@ -279,17 +285,30 @@ export const orderStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
+    
+    // Validate status against allowed values
+    const validStatuses = ["Not Process", "Processing", "Shipped", "Delivered", "Cancel"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid status value",
+      });
+    }
+    
     const orders = await orderModel.findByIdAndUpdate(
       orderId,
       { status },
       { new: true }
     );
-    return res.json(orders);
+    return res.json({
+      success: true,
+      orders
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).send({
       success: false,
-      message: "Error While Updateing Order",
+      message: "Error While Updating Order",
       error,
     });
   }
