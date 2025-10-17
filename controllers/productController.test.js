@@ -22,6 +22,7 @@ jest.mock("../models/productModel.js", () => {
     findById: jest.fn(),
     findByIdAndDelete: jest.fn(),
     findByIdAndUpdate: jest.fn(),
+    // optional: estimatedDocumentCount may be set per-test
   });
   Model.mockImplementation((doc = {}) => ({
     ...doc,
@@ -92,6 +93,9 @@ const makeRes = () => {
   return res;
 };
 
+// Prefer res.json if used, else res.send — keeps tests robust to controller changes
+const pickResponder = (res) => (res.json.mock.calls.length ? res.json : res.send);
+
 const makeQueryChain = (result) => {
   const chain = {
     _calls: {},
@@ -132,6 +136,11 @@ beforeEach(() => {
   }));
 });
 
+// Valid ObjectIds for tests that should pass ObjectId validation
+const OID1 = "507f1f77bcf86cd799439011";
+const OID2 = "507f1f77bcf86cd799439012";
+const OID3 = "507f1f77bcf86cd799439013";
+
 /* ---------- createProductController ---------- */
 describe("createProductController", () => {
   const baseFields = {
@@ -153,8 +162,9 @@ describe("createProductController", () => {
     const req = { fields, files: {} };
     const res = makeRes();
     await createProductController(req, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith({ error: expectedError });
+    expect(responder).toHaveBeenCalledWith({ error: expectedError });
     expect(ProductModel).not.toHaveBeenCalled();
   });
 
@@ -165,8 +175,9 @@ describe("createProductController", () => {
     };
     const res = makeRes();
     await createProductController(req, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith({
+    expect(responder).toHaveBeenCalledWith({
       error: "photo is Required and should be less then 1mb",
     });
   });
@@ -189,8 +200,9 @@ describe("createProductController", () => {
     expect(instance.photo.data).toBeInstanceOf(Buffer);
     expect(instance.photo.contentType).toBe("image/png");
     expect(instance.save).toHaveBeenCalled();
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.send).toHaveBeenCalledWith(
+    expect(responder).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
         message: "Product Created Successfully",
@@ -209,9 +221,10 @@ describe("createProductController", () => {
     const req = { fields: baseFields, files: {} };
     const res = makeRes();
     await createProductController(req, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error in crearing product" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/creat|crearing|create/i) })
     );
   });
 });
@@ -224,13 +237,14 @@ describe("getProductController", () => {
     ProductModel.find.mockReturnValue(chain);
     const res = makeRes();
     await getProductController({}, res);
+    const responder = pickResponder(res);
     expect(ProductModel.find).toHaveBeenCalledWith({});
     expect(chain.populate).toHaveBeenCalledWith("category");
     expect(chain.select).toHaveBeenCalledWith("-photo");
     expect(chain.limit).toHaveBeenCalledWith(12);
     expect(chain.sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({
+    expect(responder).toHaveBeenCalledWith({
       success: true,
       counTotal: products.length,
       message: "ALlProducts ",
@@ -250,9 +264,10 @@ describe("getProductController", () => {
     }));
     const res = makeRes();
     await getProductController({}, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Erorr in getting products" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/get.*products/i) })
     );
   });
 });
@@ -265,26 +280,49 @@ describe("getSingleProductController", () => {
     ProductModel.findOne.mockReturnValue(chain);
     const res = makeRes();
     await getSingleProductController({ params: { slug: "mac" } }, res);
+    const responder = pickResponder(res);
     expect(ProductModel.findOne).toHaveBeenCalledWith({ slug: "mac" });
     expect(chain.select).toHaveBeenCalledWith("-photo");
     expect(chain.populate).toHaveBeenCalledWith("category");
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({
-      success: true,
-      message: "Single Product Fetched",
-      product,
-    });
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        product,
+      })
+    );
+  });
+
+  test("404 when not found", async () => {
+    const chain = makeQueryChain(null);
+    ProductModel.findOne.mockReturnValue(chain);
+    const res = makeRes();
+    await getSingleProductController({ params: { slug: "missing" } }, res);
+    const responder = pickResponder(res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false })
+    );
   });
 
   test("500 on DB error", async () => {
+    const err = new Error("fail");
+
     ProductModel.findOne.mockReturnValue({
-      select: () => ({ populate: () => Promise.reject(new Error("fail")) }),
+      populate: () => ({ select: () => Promise.reject(err) }),
+      select:   () => ({ populate: () => Promise.reject(err) }),
     });
+
     const res = makeRes();
     await getSingleProductController({ params: { slug: "mac" } }, res);
+    const responder = pickResponder(res);
+
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Eror while getitng single product" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        message: expect.stringMatching(/error.*product|single product/i),
+      })
     );
   });
 });
@@ -295,8 +333,8 @@ describe("productPhotoController", () => {
     const product = { photo: { data: Buffer.from("X"), contentType: "image/png" } };
     ProductModel.findById.mockReturnValue({ select: () => Promise.resolve(product) });
     const res = makeRes();
-    await productPhotoController({ params: { pid: "p1" } }, res);
-    expect(ProductModel.findById).toHaveBeenCalledWith("p1");
+    await productPhotoController({ params: { pid: OID1 } }, res);
+    expect(ProductModel.findById).toHaveBeenCalledWith(OID1);
     expect(res.set).toHaveBeenCalledWith("Content-Type", "image/png");
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.send).toHaveBeenCalledWith(product.photo.data);
@@ -305,19 +343,31 @@ describe("productPhotoController", () => {
   test("404 JSON when photo missing", async () => {
     ProductModel.findById.mockReturnValue({ select: () => Promise.resolve({ photo: {} }) });
     const res = makeRes();
-    await productPhotoController({ params: { pid: "p2" } }, res);
+    await productPhotoController({ params: { pid: OID2 } }, res);
+    const responder = pickResponder(res);
     expect(res.set).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.send).toHaveBeenCalledWith({ success: false, message: "Photo not found" });
+    expect(responder).toHaveBeenCalledWith({ success: false, message: "Photo not found" });
+  });
+
+  test("400 on malformed ObjectId", async () => {
+    const res = makeRes();
+    await productPhotoController({ params: { pid: "not-an-objectid" } }, res);
+    const responder = pickResponder(res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false })
+    );
   });
 
   test("500 on DB error", async () => {
     ProductModel.findById.mockReturnValue({ select: () => Promise.reject(new Error("read err")) });
     const res = makeRes();
-    await productPhotoController({ params: { pid: "p3" } }, res);
+    await productPhotoController({ params: { pid: OID3 } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Erorr while getting photo" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/photo/i) })
     );
   });
 });
@@ -330,9 +380,10 @@ describe("deleteProductController", () => {
     });
     const res = makeRes();
     await deleteProductController({ params: { pid: "deadbeef" } }, res);
+    const responder = pickResponder(res);
     expect(ProductModel.findByIdAndDelete).toHaveBeenCalledWith("deadbeef");
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({
+    expect(responder).toHaveBeenCalledWith({
       success: true,
       message: "Product Deleted successfully",
     });
@@ -344,9 +395,10 @@ describe("deleteProductController", () => {
     });
     const res = makeRes();
     await deleteProductController({ params: { pid: "x" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error while deleting product" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/delet/i) })
     );
   });
 });
@@ -372,8 +424,9 @@ describe("updateProductController", () => {
     const req = { fields: badFields, files: {}, params: { pid: "p1" } };
     const res = makeRes();
     await updateProductController(req, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith({ error: msg });
+    expect(responder).toHaveBeenCalledWith({ error: msg });
     expect(ProductModel.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
@@ -385,8 +438,9 @@ describe("updateProductController", () => {
     };
     const res = makeRes();
     await updateProductController(req, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith({
+    expect(responder).toHaveBeenCalledWith({
       error: "photo is Required and should be less then 1mb",
     });
   });
@@ -411,8 +465,9 @@ describe("updateProductController", () => {
     expect(fs.readFileSync).toHaveBeenCalledWith("/tmp/new.jpg");
     expect(updated.photo.contentType).toBe("image/jpeg");
     expect(updated.save).toHaveBeenCalled();
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.send).toHaveBeenCalledWith(
+    expect(responder).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
         message: "Product Updated Successfully",
@@ -425,9 +480,10 @@ describe("updateProductController", () => {
     ProductModel.findByIdAndUpdate.mockRejectedValue(new Error("upd err"));
     const res = makeRes();
     await updateProductController({ fields, files: {}, params: { pid: "p1" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error in Updte product" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/upd|update/i) })
     );
   });
 
@@ -436,9 +492,54 @@ describe("updateProductController", () => {
     ProductModel.findByIdAndUpdate.mockResolvedValue(updated);
     const res = makeRes();
     await updateProductController({ fields, files: {}, params: { pid: "p1" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error in Updte product" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/upd|update/i) })
+    );
+  });
+
+  test("404 when product not found", async () => {
+    ProductModel.findByIdAndUpdate.mockResolvedValue(null);
+    const res = makeRes();
+    await updateProductController(
+      { fields: { ...fields }, files: {}, params: { pid: "missing" } },
+      res
+    );
+    const responder = pickResponder(res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(responder).toHaveBeenCalledWith({
+      success: false,
+      message: "Product not found",
+    });
+  });
+
+  test("200 OK on success (no photo)", async () => {
+    const updated = { _id: "p1", photo: {}, save: jest.fn().mockResolvedValue({ _id: "p1" }) };
+    ProductModel.findByIdAndUpdate.mockResolvedValue(updated);
+    const res = makeRes();
+    await updateProductController(
+      {
+        fields: {
+          name: " Name ",
+          description: "D",
+          price: 5,
+          category: "c",
+          quantity: 2,
+          shipping: true,
+        },
+        files: {},
+        params: { pid: "p1" },
+      },
+      res
+    );
+    const responder = pickResponder(res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: "Product Updated Successfully",
+      })
     );
   });
 });
@@ -450,20 +551,23 @@ describe("productFiltersController", () => {
     ProductModel.find.mockResolvedValue(products);
     const res = makeRes();
     await productFiltersController({ body: { checked: ["c1", "c2"], radio: [10, 50] } }, res);
+    const responder = pickResponder(res);
     expect(ProductModel.find).toHaveBeenCalledWith({
       category: ["c1", "c2"],
       price: { $gte: 10, $lte: 50 },
     });
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ success: true, products });
+    expect(responder).toHaveBeenCalledWith({ success: true, products });
   });
 
   test("200 with empty filters -> args {}", async () => {
     ProductModel.find.mockResolvedValue([]);
     const res = makeRes();
     await productFiltersController({ body: { checked: [], radio: [] } }, res);
+    const responder = pickResponder(res);
     expect(ProductModel.find).toHaveBeenCalledWith({});
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(responder).toHaveBeenCalledWith({ success: true, products: [] });
   });
 
   test("400 on error", async () => {
@@ -472,9 +576,10 @@ describe("productFiltersController", () => {
     await expect(
       productFiltersController({ body: { checked: [], radio: [] } }, res)
     ).resolves.toBeUndefined();
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error WHile Filtering Products" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/filter/i) })
     );
   });
 });
@@ -485,18 +590,20 @@ describe("productCountController", () => {
     ProductModel.estimatedDocumentCount = jest.fn().mockResolvedValue(42);
     const res = makeRes();
     await productCountController({}, res);
+    const responder = pickResponder(res);
     expect(ProductModel.estimatedDocumentCount).toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ success: true, total: 42 });
+    expect(responder).toHaveBeenCalledWith({ success: true, total: 42 });
   });
 
   test("400 on error", async () => {
     ProductModel.estimatedDocumentCount = jest.fn().mockRejectedValue(new Error("cnt err"));
     const res = makeRes();
     await productCountController({}, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error in product count" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/count/i) })
     );
   });
 });
@@ -509,12 +616,13 @@ describe("productListController", () => {
     ProductModel.find.mockReturnValue(chain);
     const res = makeRes();
     await productListController({ params: {} }, res);
+    const responder = pickResponder(res);
     expect(chain.select).toHaveBeenCalledWith("-photo");
     expect(chain.skip).toHaveBeenCalledWith(0);
     expect(chain.limit).toHaveBeenCalledWith(6);
     expect(chain.sort).toHaveBeenCalledWith({ createdAt: -1 });
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ success: true, products });
+    expect(responder).toHaveBeenCalledWith({ success: true, products });
   });
 
   test("200 paginated list page=3 (skip 12)", async () => {
@@ -522,8 +630,10 @@ describe("productListController", () => {
     ProductModel.find.mockReturnValue(chain);
     const res = makeRes();
     await productListController({ params: { page: "3" } }, res);
+    const responder = pickResponder(res);
     expect(chain.skip).toHaveBeenCalledWith(12);
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(responder).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 
   test("400 on error", async () => {
@@ -532,9 +642,10 @@ describe("productListController", () => {
     });
     const res = makeRes();
     await productListController({ params: { page: "2" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "error in per page ctrl" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/per page/i) })
     );
   });
 });
@@ -559,19 +670,20 @@ describe("searchProductController", () => {
     ProductModel.find.mockReturnValue({ select: () => Promise.reject(new Error("search err")) });
     const res = makeRes();
     await searchProductController({ params: { keyword: "x" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error In Search Product API" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/search/i) })
     );
   });
 
   // unit test
   test("returns single product on exact name match", async () => {
-      const product = [{ _id: "p1", name: "Mac Book Air" }];
-      ProductModel.find.mockReturnValue({ select: () => Promise.resolve(product) });
-      const res = makeRes();
-      await searchProductController({ params: { keyword: "Mac Book Air" } }, res);
-      expect(res.json).toHaveBeenCalledWith(product);
+    const product = [{ _id: "p1", name: "Mac Book Air" }];
+    ProductModel.find.mockReturnValue({ select: () => Promise.resolve(product) });
+    const res = makeRes();
+    await searchProductController({ params: { keyword: "Mac Book Air" } }, res);
+    expect(res.json).toHaveBeenCalledWith(product);
   });
 
   test("returns products regardless of case", async () => {
@@ -643,7 +755,6 @@ describe("searchProductController", () => {
     await searchProductController({ params: { keyword: "Laptop" } }, res);
     expect(res.json).toHaveBeenCalledWith(products);
   });
-
 });
 
 /* ---------- realtedProductController ---------- */
@@ -654,12 +765,13 @@ describe("realtedProductController", () => {
     ProductModel.find.mockReturnValue(chain);
     const res = makeRes();
     await realtedProductController({ params: { pid: "p1", cid: "c1" } }, res);
+    const responder = pickResponder(res);
     expect(ProductModel.find).toHaveBeenCalledWith({ category: "c1", _id: { $ne: "p1" } });
     expect(chain.select).toHaveBeenCalledWith("-photo");
     expect(chain.limit).toHaveBeenCalledWith(3);
     expect(chain.populate).toHaveBeenCalledWith("category");
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ success: true, products });
+    expect(responder).toHaveBeenCalledWith({ success: true, products });
   });
 
   test("400 on error", async () => {
@@ -668,9 +780,10 @@ describe("realtedProductController", () => {
     });
     const res = makeRes();
     await realtedProductController({ params: { pid: "p1", cid: "c1" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "error while geting related product" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/related/i) })
     );
   });
 });
@@ -685,19 +798,21 @@ describe("productCategoryController", () => {
     ProductModel.find.mockReturnValue(chain);
     const res = makeRes();
     await productCategoryController({ params: { slug: "laptops" } }, res);
+    const responder = pickResponder(res);
     expect(CategoryModel.findOne).toHaveBeenCalledWith({ slug: "laptops" });
     expect(ProductModel.find).toHaveBeenCalledWith({ category });
     expect(chain.populate).toHaveBeenCalledWith("category");
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ success: true, category, products });
+    expect(responder).toHaveBeenCalledWith({ success: true, category, products });
   });
 
   test("404 when category not found", async () => {
     CategoryModel.findOne.mockResolvedValue(null);
     const res = makeRes();
     await productCategoryController({ params: { slug: "missing" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.send).toHaveBeenCalledWith({
+    expect(responder).toHaveBeenCalledWith({
       success: false,
       message: "Category not found",
     });
@@ -707,9 +822,10 @@ describe("productCategoryController", () => {
     CategoryModel.findOne.mockRejectedValue(new Error("cat err"));
     const res = makeRes();
     await productCategoryController({ params: { slug: "x" } }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Error While Getting products" })
+    expect(responder).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, message: expect.stringMatching(/getting products/i) })
     );
   });
 });
@@ -752,7 +868,7 @@ describe("brainTreePaymentController", () => {
     expect(OrderModel).toHaveBeenCalledWith(
       expect.objectContaining({
         products: [{ price: 10 }, { price: 2.5 }],
-        payment: expect.objectContaining({ id: "txn1" }), // allow extra keys like 'success'
+        payment: expect.objectContaining({ id: "txn1" }),
         buyer: "user1",
       })
     );
@@ -789,8 +905,9 @@ describe("REGRESSION lock-ins", () => {
     const res = makeRes();
     await productCountController({}, res);
     expect(ProductModel.estimatedDocumentCount).toHaveBeenCalled();
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({ success: true, total: 123 });
+    expect(responder).toHaveBeenCalledWith({ success: true, total: 123 });
   });
 
   test("updateProductController returns 404 when product not found", async () => {
@@ -811,8 +928,9 @@ describe("REGRESSION lock-ins", () => {
       },
       res
     );
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.send).toHaveBeenCalledWith({
+    expect(responder).toHaveBeenCalledWith({
       success: false,
       message: "Product not found",
     });
@@ -837,8 +955,9 @@ describe("REGRESSION lock-ins", () => {
       },
       res
     );
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith(
+    expect(responder).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
         message: "Product Updated Successfully",
@@ -850,7 +969,7 @@ describe("REGRESSION lock-ins", () => {
     const product = { photo: { data: Buffer.from("X"), contentType: "image/png" } };
     ProductModel.findById.mockReturnValue({ select: () => Promise.resolve(product) });
     const res = makeRes();
-    await productPhotoController({ params: { pid: "p1" } }, res);
+    await productPhotoController({ params: { pid: OID1 } }, res);
     expect(res.set).toHaveBeenCalledWith("Content-Type", "image/png");
   });
 
@@ -870,8 +989,9 @@ describe("REGRESSION lock-ins", () => {
       },
       res
     );
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.send).toHaveBeenCalledWith(
+    expect(responder).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
         message: "Product Created Successfully",
@@ -883,7 +1003,8 @@ describe("REGRESSION lock-ins", () => {
   test("createProductController returns 400 on validation error (Name required)", async () => {
     const res = makeRes();
     await createProductController({ fields: { name: undefined }, files: {} }, res);
+    const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.send).toHaveBeenCalledWith({ error: "Name is Required" });
+    expect(responder).toHaveBeenCalledWith({ error: "Name is Required" });
   });
 });

@@ -1,0 +1,10 @@
+{
+  "_id": "68ecb39346000991f8a1be23",
+  "name": "Laptop",
+  "price": 1500,
+  "description": "High performance laptop",
+  "image": "/images/laptop.jpg",
+  "stock": 10,
+  "category": { "_id": "cat1", "name": "Electronics" },
+  "slug": "laptop-123"
+}
