@@ -131,10 +131,8 @@ beforeEach(async () => {
     },
   ];
 
-  // Insert orders and get the saved documents with their IDs
   testOrders = await Order.insertMany(orderData);
 
-  // Mock response object for all tests
   mockRes = {
     json: jest.fn(),
     status: jest.fn().mockReturnThis(),
@@ -144,14 +142,12 @@ beforeEach(async () => {
 
 describe("getAllOrdersController Integration Tests", () => {
   beforeEach(() => {
-    // Mock request object specific to this test suite
     mockReq = {
       user: { _id: adminUser._id },
     };
   });
 
   it("should retrieve all orders from the database", async () => {
-    // Execute the controller
     await getAllOrdersController(mockReq, mockRes);
 
     // Verify response
@@ -184,10 +180,8 @@ describe("getAllOrdersController Integration Tests", () => {
       throw new Error("Database connection error");
     });
 
-    // Spy on console.log to verify error logging
     const consoleSpy = jest.spyOn(console, "log").mockImplementation();
 
-    // Execute the controller
     await getAllOrdersController(mockReq, mockRes);
 
     // Verify error handling
@@ -202,21 +196,18 @@ describe("getAllOrdersController Integration Tests", () => {
     // Verify error was logged
     expect(consoleSpy).toHaveBeenCalled();
 
-    // Restore console.log
     consoleSpy.mockRestore();
   });
 });
 
 describe("getOrdersController Integration Tests", () => {
   beforeEach(() => {
-    // Mock request object specific to this test suite
     mockReq = {
       user: { _id: regularUser._id },
     };
   });
 
   it("should retrieve only orders associated with the logged-in user", async () => {
-    // Execute the controller
     await getOrdersController(mockReq, mockRes);
 
     // Verify response
@@ -249,7 +240,6 @@ describe("getOrdersController Integration Tests", () => {
       throw new Error("Database query failed");
     });
 
-    // Spy on console.log to verify error logging
     const consoleSpy = jest.spyOn(console, "log").mockImplementation();
 
     // Execute the controller
@@ -267,7 +257,6 @@ describe("getOrdersController Integration Tests", () => {
     // Verify error was logged
     expect(consoleSpy).toHaveBeenCalled();
 
-    // Restore console.log
     consoleSpy.mockRestore();
   });
 });
@@ -276,7 +265,6 @@ describe("orderStatusController Integration Tests", () => {
   let orderId;
 
   beforeEach(() => {
-    // Get the ID of the first order for testing
     orderId = testOrders[0]._id;
 
     // Mock request object specific to this test suite
@@ -288,10 +276,8 @@ describe("orderStatusController Integration Tests", () => {
   });
 
   it("should update the status of an existing order", async () => {
-    // Set the status to update
     mockReq.body.status = "Delivered";
 
-    // Execute the controller
     await orderStatusController(mockReq, mockRes);
 
     // Verify response
@@ -308,10 +294,9 @@ describe("orderStatusController Integration Tests", () => {
   });
 
   it("should return null when attempting to update a non-existent order", async () => {
-    // Set a non-existent order ID
+    // Non-existent order ID
     mockReq.params.orderId = new mongoose.Types.ObjectId().toString();
 
-    // Execute the controller
     await orderStatusController(mockReq, mockRes);
 
     // Verify response
@@ -327,10 +312,8 @@ describe("orderStatusController Integration Tests", () => {
       throw new Error("Database update failed");
     });
 
-    // Spy on console.log to verify error logging
     const consoleSpy = jest.spyOn(console, "log").mockImplementation();
 
-    // Execute the controller
     await orderStatusController(mockReq, mockRes);
 
     // Verify error handling
@@ -345,7 +328,6 @@ describe("orderStatusController Integration Tests", () => {
     // Verify error was logged
     expect(consoleSpy).toHaveBeenCalled();
 
-    // Restore console.log
     consoleSpy.mockRestore();
   });
 
@@ -353,7 +335,6 @@ describe("orderStatusController Integration Tests", () => {
     // Try to update with an invalid status
     mockReq.body.status = "InvalidStatus";
 
-    // Execute the controller - this should not throw an error but will be caught in the controller
     await orderStatusController(mockReq, mockRes);
 
     // Check that the database was not updated with the invalid status

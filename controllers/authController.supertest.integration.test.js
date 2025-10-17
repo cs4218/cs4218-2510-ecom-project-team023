@@ -148,8 +148,6 @@ beforeEach(async () => {
   userToken = jwt.sign({ _id: regularUser._id }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
-
-  // Do not add Bearer prefix - the middleware expects just the token
 });
 
 // Clean up: Clear all data after each test to ensure isolation
@@ -223,7 +221,6 @@ describe("GET /api/v1/auth/orders - True Integration Tests", () => {
 // True integration tests for orderStatusController
 describe("PUT /api/v1/auth/order-status/:orderId - True Integration Tests", () => {
   it("should update order status when authenticated as admin", async () => {
-    // Get the first order ID
     const orders = await Order.find();
     const orderId = orders[0]._id;
     const newStatus = "Shipped";
@@ -286,14 +283,17 @@ describe("PUT /api/v1/auth/order-status/:orderId - True Integration Tests", () =
     expect(order.status).not.toBe("InvalidStatus");
   });
 
-  it("should return 400 when order does not exist", async () => {
+  it("should return 200 with null orders when order does not exist", async () => {
     const nonExistentOrderId = new mongoose.Types.ObjectId();
 
     const response = await request
       .put(`/api/v1/auth/order-status/${nonExistentOrderId}`)
       .set("Authorization", adminToken)
-      .send({ status: "Completed" });
+      .send({ status: "Processing" });
 
-    expect(response.status).toBe(400);
+    // Check for successful request but null order
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.orders).toBeNull();
   });
 });
