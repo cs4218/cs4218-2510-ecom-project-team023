@@ -14,7 +14,7 @@ const Orders = () => {
   const getOrders = async () => {
     try {
       const { data } = await axios.get("/api/v1/auth/orders");
-      setOrders(data);
+      setOrders(data.orders);
     } catch (error) {
       console.log(error);
     }
