@@ -1,21 +1,36 @@
-// playwright.config.ts
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: 'tests/e2e',
-  timeout: 30_000,
-  expect: { timeout: 5_000 },
+
+  testMatch: ['**/*.spec.{ts,js}'],
+
+  testIgnore: [
+    '**/*.test.*',          // ignore all *.test.* (Jest)
+    'client/**',            // (optional) ignore client app tests
+    'controllers/**',       // (optional) backend Jest tests
+    'models/**',
+    'routes/**',
+    'helpers/**',
+    'middlewares/**',
+    'config/**',
+    // add more app/test folders if needed
+  ],
+
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
+
+  // Run browsers
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  ],
+
+  // Base browser context settings
   use: {
     baseURL: 'http://localhost:3000',
+    headless: false,                   
     trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-  },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: {
-    command: 'npm run client',   // CRA dev server
-    port: 3000,
-    reuseExistingServer: true,
-    timeout: 180_000,
+    screenshot: 'only-on-failure',
   },
 });
