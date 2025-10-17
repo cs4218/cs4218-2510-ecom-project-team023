@@ -107,7 +107,7 @@ const seedCatalog = async () => {
   const catA = await Category.create({ name: "Phones", slug: "phones" });
   const catB = await Category.create({ name: "Laptops", slug: "laptops" });
 
-  const items = [
+  let items = [
     { name: "iPhone 14",        slug: "iphone-14",        description: "A", price: 799,  quantity: 10, category: catA._id, shipping: 1 },
     { name: "iPhone 15 Pro",    slug: "iphone-15-pro",    description: "A", price: 1199, quantity: 5,  category: catA._id, shipping: 1 },
     { name: "Pixel 8",          slug: "pixel-8",          description: "A", price: 699,  quantity: 8,  category: catA._id, shipping: 1 },
@@ -117,6 +117,11 @@ const seedCatalog = async () => {
     { name: "ThinkPad X1",      slug: "thinkpad-x1",      description: "B", price: 1899, quantity: 4,  category: catB._id, shipping: 1 },
     { name: "Surface Laptop 5", slug: "surface-laptop-5", description: "B", price: 1599, quantity: 2,  category: catB._id, shipping: 1 },
   ];
+
+  // ---- ONLY CHANGE: give each doc a unique createdAt to stabilize sort/pagination
+  const base = Date.now();
+  items = items.map((p, i) => ({ ...p, createdAt: new Date(base + i * 1000) }));
+
   await Product.insertMany(items);
   return { catA: String(catA._id), catB: String(catB._id), total: items.length };
 };
