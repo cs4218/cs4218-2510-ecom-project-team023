@@ -1,53 +1,41 @@
-// jest.frontend.config.js
-const path = require("path");
+export default {
+  // name displayed during tests
+  displayName: "frontend",
 
-module.exports = {
-  rootDir: path.resolve(__dirname, "client"),
+  // simulates browser environment in jest
+  // e.g., using document.querySelector in your tests
+  testEnvironment: "jest-environment-jsdom",
 
-  projects: [
-    // ===== UNIT (browser) =====
-    {
-      displayName: "frontend",
-      testEnvironment: "jsdom",
-      transform: { "^.+\\.[jt]sx?$": "babel-jest" },
-      moduleNameMapper: { "\\.(css|less|scss|sass)$": "identity-obj-proxy" },
+  // jest does not recognise jsx files by default, so we use babel to transform any jsx files
+  transform: {
+    "^.+\\.jsx?$": "babel-jest",
+  },
 
-      testMatch: ["<rootDir>/client/src/!(_*)/**/*.test.[jt]s?(x)"],
-      testPathIgnorePatterns: [
-        "/node_modules/",
-        ".*\\.int\\.test\\.(js|jsx|ts|tsx)$",
-        ".*\\.crud\\.int\\.test\\.(js|jsx|ts|tsx)$",
-      ],
+  // tells jest how to handle css/scss imports in your tests
+  moduleNameMapper: {
+    "\\.(css|scss)$": "identity-obj-proxy",
+  },
 
-      // coverage only for unit
-      collectCoverage: true,
-      collectCoverageFrom: ["<rootDir>/src/!(_*)/**", "!<rootDir>/src/**/*.test.[jt]sx?"],
-      coverageThreshold: { global: { lines: 90, functions: 90 } },
+  // ignore all node_modules except styleMock (needed for css imports)
+  transformIgnorePatterns: ["/node_modules/(?!(styleMock\\.js)$)"],
 
-      setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
-    },
+  // only run these tests
+  testMatch: ["<rootDir>/client/src/**/*.test.js"],
 
-    // ===== INTEGRATION (node + Mongo) =====
-    {
-      displayName: "frontend-integration",
-      testEnvironment: "node",
-
-      transform: { "^.+\\.[jt]sx?$": "babel-jest" },
-
-      // Let babel-jest transpile ESM deps used by mongodb/memory-server
-      transformIgnorePatterns: [
-        "/node_modules/(?!(mongodb|bson|mongodb-memory-server|mongodb-memory-server-core|@mongodb-js)/)",
-      ],
-
-      setupFiles: ["<rootDir>/jest.polyfills.cjs"],
-
-      testMatch: [
-        "<rootDir>/client/src/**/*.int.test.[jt]s?(x)",
-        "<rootDir>/cleint/src/**/*.crud.int.test.[jt]s?(x)",
-      ],
-
-      moduleNameMapper: { "\\.(css|less|scss|sass)$": "identity-obj-proxy" },
-      testPathIgnorePatterns: ["/node_modules/"],
-    },
+  // jest code coverage
+  collectCoverage: true,
+  collectCoverageFrom: [
+    "client/src/pages/**/**",
+    "client/src/components/**",
+    "client/src/context/**",
+    "client/src/context/**",
+    "client/src/hooks/**",
   ],
+  coverageThreshold: {
+    global: {
+      lines: 90,
+      functions: 90,
+    },
+  },
+  setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
 };
