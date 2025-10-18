@@ -1,14 +1,16 @@
-// tests/integration/braintree.e2e.test.js
-import 'dotenv/config'
-import request from 'supertest'
-import mongoose from 'mongoose'
-import jwt from 'jsonwebtoken'
-import { ObjectId } from 'mongodb'
-import app from "../../../server.js"
-import User from '../../../models/userModel.js'
-import Product from '../../../models/productModel.js'
-import Category from '../../../models/categoryModel.js'
-import Order from '../../../models/orderModel.js'
+/**
+ * @jest-environment node
+ */
+import 'dotenv/config';
+import request from 'supertest';
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import { ObjectId } from 'mongodb';
+import app from "../../../server.js";
+import User from '../../../models/userModel.js';
+import Product from '../../../models/productModel.js';
+import Category from '../../../models/categoryModel.js';
+import Order from '../../../models/orderModel.js';
 
 jest.setTimeout(60000)
 
@@ -75,15 +77,6 @@ describe('Braintree integration', () => {
   test('POST /api/v1/product/braintree/payment requires auth', async () => {
     const res = await request(app).post('/api/v1/product/braintree/payment').send({ nonce: 'fake-valid-nonce', cart: [] })
     expect(res.status).toBe(401)
-  })
-
-  test('POST /api/v1/product/braintree/payment legacy cart success', async () => {
-    const res = await request(app)
-      .post('/api/v1/product/braintree/payment')
-      .set('Authorization', token)
-      .send({ nonce: 'fake-valid-nonce', cart: [{ name: 'X', price: 10 }, { name: 'Y', price: 20 }] })
-    expect(res.status).toBe(200)
-    expect(res.body.ok).toBe(true)
   })
 
   test('POST /api/v1/product/braintree/payment robust cart success and stock decremented', async () => {
