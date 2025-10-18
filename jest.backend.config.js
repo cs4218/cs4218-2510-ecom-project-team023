@@ -10,6 +10,7 @@ module.exports = {
         "/node_modules/",
         ".*\\.int\\.test\\.(js|jsx|ts|tsx)$",
         ".*\\.crud\\.int\\.test\\.(js|jsx|ts|tsx)$",
+        ".*\\.integration\\.test\\.(js|jsx|ts|tsx)$",
         "^<rootDir>/client/",
       ],
 
@@ -41,6 +42,7 @@ module.exports = {
       testMatch: [
         "<rootDir>/**/*.int.test.js",
         "<rootDir>/**/*.crud.int.test.js",
+        "<rootDir>/**/*.integration.test.js",
       ],
 
       // Load env + any global polyfills for integration

@@ -43,7 +43,8 @@ module.exports = {
 
       testMatch: [
         "<rootDir>/client/src/**/*.int.test.[jt]s?(x)",
-        "<rootDir>/cleint/src/**/*.crud.int.test.[jt]s?(x)",
+        "<rootDir>/client/src/**/*.crud.int.test.[jt]s?(x)",
+        "<rootDir>/client/src/**/*.integration.test.[jt]s?(x)",
       ],
 
       moduleNameMapper: { "\\.(css|less|scss|sass)$": "identity-obj-proxy" },
