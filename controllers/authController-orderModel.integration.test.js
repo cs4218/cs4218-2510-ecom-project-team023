@@ -10,7 +10,7 @@ import {
   getAllOrdersController,
   getOrdersController,
   orderStatusController,
-} from "../controllers/authController.js";
+} from "./authController.js";
 
 let mongoServer;
 
