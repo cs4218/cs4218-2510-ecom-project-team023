@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 // setup written with help from ChatGPT
 jest.setTimeout(30000);
 
