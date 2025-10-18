@@ -12,8 +12,8 @@
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
     "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js",
-    "test:e2e": "NODE_ENV=test playwright test",
-    "test:e2e:ui": "NODE_ENV=test playwright test --ui",
+    "test:e2e": "cross-env NODE_ENV=test playwright test",
+    "test:e2e:ui": "cross-env NODE_ENV=test playwright test --ui",
     "test:e2e:headed": "playwright test -c playwright.config.ts --headed"
   },
   "keywords": [],
@@ -47,6 +47,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.12.12",
     "babel-jest": "^29.7.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.34.0",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.3.0",
@@ -58,5 +59,4 @@
     "supertest": "^7.1.4",
     "typescript-eslint": "^8.41.0"
   }
-  
 }
