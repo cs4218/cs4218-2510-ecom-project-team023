@@ -54,9 +54,14 @@ const Orders = () => {
                       )
                       .map((o, i) => (
                         <React.Fragment key={o._id}>
-                          <tr className="order-summary-row">
+                          <tr
+                            className="order-summary-row"
+                            data-testid="order-row"
+                          >
                             <td>{i + 1}</td>
-                            <td>{o?.status}</td>
+                            <td data-testid={`order-status-${i}`}>
+                              {o?.status}
+                            </td>
                             <td>{o?.buyer?.name}</td>
                             <td>{moment(o?.updatedAt).fromNow()}</td>
                             <td>{o?.payment.success ? "Success" : "Failed"}</td>
