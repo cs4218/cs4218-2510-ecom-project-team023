@@ -37,7 +37,7 @@ const AdminOrders = () => {
       const response = await axios.put(`/api/v1/auth/order-status/${orderId}`, {
         status: value,
       });
-      if (response.data.ok) {
+      if (response.data.success) {
         toast.success("Order status updated successfully");
         getOrders();
       }
