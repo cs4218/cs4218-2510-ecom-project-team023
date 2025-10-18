@@ -10,8 +10,8 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "sonarqube": "sonar-scanner",
     "test": "npm run test:frontend && npm run test:backend",
-    "test:frontend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js --selectProjects frontend && node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js --selectProjects frontend-integration --runInBand",
-    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js --selectProjects backend && NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js --selectProjects integration --runInBand --detectOpenHandles",
+    "test:frontend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
+    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js",
     "test:e2e": "NODE_ENV=test playwright test",
     "test:e2e:ui": "NODE_ENV=test playwright test --ui",
     "test:e2e:headed": "playwright test -c playwright.config.ts --headed"
