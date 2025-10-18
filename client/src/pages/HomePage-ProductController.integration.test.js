@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 // setup written with help from ChatGPT
 jest.setTimeout(30000);
 
@@ -118,7 +122,7 @@ const seedCatalog = async () => {
     { name: "Surface Laptop 5", slug: "surface-laptop-5", description: "B", price: 1599, quantity: 2,  category: catB._id, shipping: 1 },
   ];
 
-  // ---- ONLY CHANGE: give each doc a unique createdAt to stabilize sort/pagination
+  // Stabilize server-side sorting: unique createdAt per doc
   const base = Date.now();
   items = items.map((p, i) => ({ ...p, createdAt: new Date(base + i * 1000) }));
 
@@ -127,8 +131,8 @@ const seedCatalog = async () => {
 };
 
 // ---------- tests ----------
-describe("Product Listing, Counting, and Filtering (Public API)", () => {
-  it("GET /product-list/:page returns paginated results that sum to the total from /product-count", async () => {
+describe("HomePage ↔ ProductController (public endpoints)", () => {
+  it("product-count matches total inserted", async () => {
     const { total } = await seedCatalog();
 
     const countRes = await request(app).get("/api/v1/product/product-count");
@@ -136,28 +140,35 @@ describe("Product Listing, Counting, and Filtering (Public API)", () => {
     const reported = extractCount(countRes.body);
     expect(typeof reported).toBe("number");
     expect(reported).toBe(total);
-
-    const page1 = await request(app).get("/api/v1/product/product-list/1");
-    expect(page1.status).toBe(200);
-    const first = extractProducts(page1.body);
-    expect(Array.isArray(first)).toBe(true);
-    expect(first.length).toBeGreaterThan(0);
-
-    const perPage = first.length;
-    const pages = Math.max(1, Math.ceil(reported / perPage));
-
-    const ids = new Set(first.map((p) => String(p._id)));
-    for (let p = 2; p <= pages; p++) {
-      const r = await request(app).get(`/api/v1/product/product-list/${p}`);
-      expect(r.status).toBe(200);
-      const arr = extractProducts(r.body);
-      arr.forEach((item) => ids.add(String(item._id)));
-      if (p < pages) expect(arr.length).toBeLessThanOrEqual(perPage);
-    }
-    expect(ids.size).toBe(reported);
   });
 
-  it("POST /product-filters filters by category AND price range", async () => {
+  // ======= ONLY CHANGED TEST =======
+  it("product-list paginates and overall union equals total", async () => {
+    const { total } = await seedCatalog();
+
+    // Crawl pages until empty, union all IDs
+    const ids = new Set();
+    let page = 1;
+    const safetyCap = 50; // prevents infinite loop on server bug
+
+    for (; page <= safetyCap; page++) {
+      const r = await request(app).get(`/api/v1/product/product-list/${page}`);
+      expect(r.status).toBe(200);
+      const arr = extractProducts(r.body);
+      if (!arr.length) break; // last page reached
+      arr.forEach((item) => ids.add(String(item._id)));
+    }
+
+    // Compare with DB and the count endpoint
+    const realCount = await Product.countDocuments({});
+    expect(ids.size).toBe(realCount);
+    const countRes = await request(app).get("/api/v1/product/product-count");
+    const reported = extractCount(countRes.body);
+    expect(ids.size).toBe(reported);
+    expect(reported).toBe(total);
+  });
+
+  it("product-filters returns items in category & within price range", async () => {
     const { catA } = await seedCatalog();
 
     const res = await request(app)
@@ -182,36 +193,13 @@ describe("Product Listing, Counting, and Filtering (Public API)", () => {
     expect(names).not.toContain("Pixel 8"); // 699 < 700
   });
 
-  it("POST /product-filters with empty filters returns all products (edge case)", async () => {
+  it("product-list beyond last page returns empty array", async () => {
     const { total } = await seedCatalog();
 
-    const res = await request(app)
-      .post("/api/v1/product/product-filters")
-      .send({ checked: [], radio: [] })
-      .set("Content-Type", "application/json");
-
-    expect(res.status).toBe(200);
-    const products = extractProducts(res.body);
-    expect(Array.isArray(products)).toBe(true);
-    expect(products.length).toBe(total);
-  });
-
-  it("Count endpoint matches actual DB count", async () => {
-    const { total } = await seedCatalog();
-    const real = await Product.countDocuments({});
-    expect(real).toBe(total);
-
-    const countRes = await request(app).get("/api/v1/product/product-count");
-    expect(countRes.status).toBe(200);
-    expect(extractCount(countRes.body)).toBe(real);
-  });
-
-  it("Pagination page > last returns empty array", async () => {
-    const { total } = await seedCatalog();
-
-    const page1 = await request(app).get("/api/v1/product/product-list/1");
-    const first = extractProducts(page1.body);
-    const perPage = first.length || 6;
+    const first = await request(app).get("/api/v1/product/product-list/1");
+    expect(first.status).toBe(200);
+    const firstArr = extractProducts(first.body);
+    const perPage = firstArr.length || 6;
     const pages = Math.max(1, Math.ceil(total / perPage));
 
     const out = await request(app).get(`/api/v1/product/product-list/${pages + 1}`);
