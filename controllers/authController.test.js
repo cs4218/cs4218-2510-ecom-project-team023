@@ -643,7 +643,10 @@ describe("Auth Controller Unit Tests", () => {
       expect(orderModel.find).toHaveBeenCalledWith({ buyer: "userId123" });
       expect(firstPopulateMock).toHaveBeenCalledWith("products", "-photo");
       expect(secondPopulateMock).toHaveBeenCalledWith("buyer", "name");
-      expect(mockRes.json).toHaveBeenCalledWith(mockOrders);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: mockOrders
+      });
     });
 
     it("should handle errors and return 500 status", async () => {
@@ -663,7 +666,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "Error WHile Geting Orders",
+          message: "Error While Getting Orders",
         })
       );
       expect(consoleSpy).toHaveBeenCalledWith(error);
@@ -689,7 +692,10 @@ describe("Auth Controller Unit Tests", () => {
       expect(mockQuery.populate).toHaveBeenCalledWith("products", "-photo");
       expect(mockQuery.populate).toHaveBeenCalledWith("buyer", "name");
       expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
-      expect(mockRes.json).toHaveBeenCalledWith(mockOrders);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: mockOrders
+      });
     });
   });
 
@@ -709,38 +715,31 @@ describe("Auth Controller Unit Tests", () => {
         { status: "Shipped" },
         { new: true }
       );
-      expect(mockRes.json).toHaveBeenCalledWith(updatedOrder);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: updatedOrder
+      });
     });
 
     // Equivalence Partitioning: Invalid Status
-    it("should return 500 and an error message when an invalid status is provided (DB validation failure)", async () => {
+    it("should return 400 and an error message when an invalid status is provided", async () => {
       // Arrange
       const invalidStatus = "InvalidStatus";
       mockReq.params = { orderId: "orderId123" };
       mockReq.body = { status: invalidStatus };
 
-      const validationError = new Error(
-        "Mongoose validation failed: Status is not an allowed enum value."
-      );
-
-      orderModel.findByIdAndUpdate.mockRejectedValue(validationError);
-
       // Act
       await orderStatusController(mockReq, mockRes);
 
       // Assert
-      expect(orderModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        "orderId123",
-        { status: invalidStatus },
-        { new: true }
-      );
+      // The controller should validate the status and return 400 before calling findByIdAndUpdate
+      expect(orderModel.findByIdAndUpdate).not.toHaveBeenCalled();
 
-      // Check that the controller caught the error and sent the correct response
-      expect(mockRes.status).toHaveBeenCalledWith(500);
+      // Check that the controller sent the correct response
+      expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
-        message: "Error While Updateing Order",
-        error: validationError, // Check that the error object was included in the response
+        message: "Invalid status value",
       });
 
       // Crucially, the success path (res.json) should NOT have been called
@@ -760,7 +759,10 @@ describe("Auth Controller Unit Tests", () => {
         { status: "Shipped" },
         { new: true }
       );
-      expect(mockRes.json).toHaveBeenCalledWith(null);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: null
+      });
     });
 
     // Control-Flow Path: Error handling
@@ -779,7 +781,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "Error While Updateing Order",
+          message: "Error While Updating Order",
         })
       );
       expect(consoleSpy).toHaveBeenCalledWith(error);
