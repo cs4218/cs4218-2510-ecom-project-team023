@@ -42,9 +42,9 @@ async function loginAndGetToken(email, password) {
 }
 
 const adminEmail = "admin@test.local";
-const userEmail  = "user@test.local";
-const adminPwd   = "Admin#123";
-const userPwd    = "User#123";
+const userEmail = "user@test.local";
+const adminPwd = "Admin#123";
+const userPwd = "User#123";
 const getId = (val) =>
   val && typeof val === "object" ? String(val._id || val.id) : String(val);
 
@@ -86,12 +86,12 @@ beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
   process.env.MONGO_URL = mongod.getUri();
 
-  // Clear precompiled models across projects
+  // Clear precompiled models across projects / watch runs
   if (typeof mongoose.deleteModel === "function") {
-    for (const name of [
-      "User","users","Order","orders","Product","products","Category","categories"
-    ]) {
-      try { mongoose.deleteModel(name); } catch {}
+    for (const name of ["User", "users", "Order", "orders", "Product", "products", "Category", "categories"]) {
+      try {
+        mongoose.deleteModel(name);
+      } catch {}
     }
   } else {
     delete mongoose.models.User;
@@ -104,7 +104,7 @@ beforeAll(async () => {
     delete mongoose.models.categories;
   }
 
-  // --- Register schemas (IMPORTANT: include Order!) ---
+  // Register schemas (IMPORTANT: include Order!)
   await import("../../../../models/userModel.js");
   await import("../../../../models/orderModel.js");
   await import("../../../../models/productModel.js");
@@ -131,9 +131,7 @@ beforeAll(async () => {
     : (mongoose.models.categories ? mongoose.model("categories") : undefined);
 
   if (!User || !Order || !Product || !Category) {
-    throw new Error(
-      `Models missing. Available: ${Object.keys(mongoose.models).join(", ")}`
-    );
+    throw new Error(`Models missing. Available: ${Object.keys(mongoose.models).join(", ")}`);
   }
 
   // Optional helper import (hashPassword)
@@ -153,7 +151,7 @@ afterEach(async () => {
 
 // --------- Tests mapping Admin Dashboard needs ---------
 describe("Admin Dashboard integration via auth routes (Sandwich)", () => {
-  let adminToken, userToken, userId, adminId, orderId;
+  let adminToken, userToken, userId, adminId, orderId, productId;
 
   beforeEach(async () => {
     // Seed users
@@ -184,13 +182,13 @@ describe("Admin Dashboard integration via auth routes (Sandwich)", () => {
     ]);
 
     adminId = String(adminDoc._id);
-    userId  = String(userDoc._id);
+    userId = String(userDoc._id);
 
     // Log in
     adminToken = await loginAndGetToken(adminEmail, adminPwd);
-    userToken  = await loginAndGetToken(userEmail,  userPwd);
+    userToken = await loginAndGetToken(userEmail, userPwd);
 
-    // Seed category/product and an order tied to user
+    // Seed category/product
     const cat = await Category.create({ name: "Electronics", slug: "electronics" });
     const prod = await Product.create({
       name: "Widget",
@@ -198,18 +196,25 @@ describe("Admin Dashboard integration via auth routes (Sandwich)", () => {
       description: "A test widget",
       price: 99,
       category: cat._id,
-      quantity: 10,
+      quantity: 10, // product stock, not order line quantity
       shipping: 1,
     });
+    productId = String(prod._id);
 
+    // One order for the normal user
     const ord = await Order.create({
-      products: [{ product: prod._id, quantity: 2 }],
+      products: [prod._id], // array of ObjectId(s) per schema
       payment: { id: "BRAIN-FAKE", status: "captured", amount: 198 },
       buyer: userId,
-      status: "Not Process",
     });
-
     orderId = String(ord._id);
+
+    // And one order for someone else (admin) so filtering is meaningful
+    await Order.create({
+      products: [prod._id],
+      payment: { id: "BRAIN-FAKE-2", status: "captured", amount: 99 },
+      buyer: adminId,
+    });
   });
 
   it("admin-auth: admin token passes, user token blocked", async () => {
@@ -218,7 +223,7 @@ describe("Admin Dashboard integration via auth routes (Sandwich)", () => {
     expect(adminRes.body?.ok).toBe(true);
 
     const userRes = await withToken(request(app).get("/api/v1/auth/admin-auth"), userToken);
-    expect([401,403]).toContain(userRes.status);
+    expect([401, 403]).toContain(userRes.status);
   });
 
   it("users: admin can list users, non-admin forbidden", async () => {
@@ -226,30 +231,44 @@ describe("Admin Dashboard integration via auth routes (Sandwich)", () => {
     expect(adminRes.status).toBe(200);
     const list = adminRes.body?.users || adminRes.body || [];
     expect(Array.isArray(list)).toBe(true);
-    const emails = list.map(u => u.email);
+    const emails = list.map((u) => u.email);
     expect(emails).toEqual(expect.arrayContaining([adminEmail, userEmail]));
 
     const userRes = await withToken(request(app).get("/api/v1/auth/users"), userToken);
-    expect([401,403]).toContain(userRes.status);
+    expect([401, 403]).toContain(userRes.status);
   });
 
   it("orders: user sees only their orders", async () => {
     const res = await withToken(request(app).get("/api/v1/auth/orders"), userToken);
     expect(res.status).toBe(200);
-    const orders = res.body?.orders || res.body || [];
+
+    const orders = res.body?.orders ?? res.body ?? [];
     expect(Array.isArray(orders)).toBe(true);
-    expect(orders.length).toBe(1);
-    expect(getId(orders[0]?.buyer)).toBe(userId);
-    expect(orders[0]?.products?.[0]?.quantity).toBe(2);
+    expect(orders).toHaveLength(1); // proves filtering (DB has 2 orders)
+
+    const [order] = orders;
+    expect(String(order?.buyer?._id ?? order?.buyer)).toBe(userId);
+
+    // Products array exists and contains our product
+    expect(Array.isArray(order.products)).toBe(true);
+    expect(order.products.length).toBe(1);
+    const maybePopulated = order.products[0];
+    const seenProductId = String(maybePopulated?._id ?? maybePopulated);
+    expect(seenProductId).toBe(productId);
+
+    // No quantity assertion here — not part of your Order schema
   });
 
   it("all-orders: admin sees all orders, includes buyer + product refs", async () => {
     const res = await withToken(request(app).get("/api/v1/auth/all-orders"), adminToken);
     expect(res.status).toBe(200);
-    const orders = res.body?.orders || res.body || [];
+
+    const orders = res.body?.orders ?? res.body ?? [];
     expect(Array.isArray(orders)).toBe(true);
-    expect(orders.length).toBe(1);
-    expect(getId(orders[0]?.buyer)).toBe(userId);
+    expect(orders.length).toBe(2);
+
+    const buyers = orders.map((o) => String(o?.buyer?._id ?? o?.buyer));
+    expect(buyers).toEqual(expect.arrayContaining([userId, adminId]));
   });
 
   it("order-status: admin updates status and change persists", async () => {
@@ -258,7 +277,7 @@ describe("Admin Dashboard integration via auth routes (Sandwich)", () => {
       adminToken
     ).set("Content-Type", "application/json");
 
-    expect([200,201]).toContain(upd.status);
+    expect([200, 201]).toContain(upd.status);
 
     const check = await Order.findById(orderId).lean();
     expect(check?.status).toBe("Shipped");
@@ -270,6 +289,6 @@ describe("Admin Dashboard integration via auth routes (Sandwich)", () => {
       userToken
     ).set("Content-Type", "application/json");
 
-    expect([401,403]).toContain(upd.status);
+    expect([401, 403]).toContain(upd.status);
   });
 });
