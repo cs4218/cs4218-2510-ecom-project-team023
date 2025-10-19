@@ -37,8 +37,6 @@ export default {
     "<rootDir>/build/",
     "<rootDir>/dist/"
   ],
-  coverageReporters: ["lcov", "text-summary"],
-  coverageDirectory: "<rootDir>/server/coverage",
-  // optional thresholds
-  // coverageThreshold: { global: { lines: 90, functions: 90 } },
+  coverageDirectory: "<rootDir>/coverage",
+  coverageThreshold: { global: { lines: 90, functions: 90 } },
 };

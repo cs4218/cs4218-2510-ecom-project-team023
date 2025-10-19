@@ -61,7 +61,6 @@ export default {
     "<rootDir>/dist/",
     "<rootDir>/client/coverage/"
   ],
-
-  coverageReporters: ["lcov", "text-summary"],
-  coverageDirectory: "<rootDir>/client/coverage"
+  coverageDirectory: "<rootDir>/coverage",
+  coverageThreshold: { global: { lines: 90, functions: 90 } },
 };

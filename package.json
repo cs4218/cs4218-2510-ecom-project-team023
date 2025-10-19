@@ -8,18 +8,14 @@
     "server": "nodemon server.js",
     "client": "npm start --prefix ./client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-
     "sonarqube": "sonar-scanner",
-
-    "test": "npm run test:backend && npm run test:frontend",
+    "test": "npm run test:frontend && npm run test:backend",
     "test:all": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.config.js",
     "test:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js",
     "test:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js",
-
     "test:e2e": "NODE_ENV=test playwright test",
     "test:e2e:ui": "NODE_ENV=test playwright test --ui",
     "test:e2e:headed": "NODE_ENV=test playwright test -c playwright.config.ts --headed",
-
     "coverage": "npm run coverage:backend && npm run coverage:frontend",
     "coverage:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js --coverage",
     "coverage:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js --coverage"
@@ -44,7 +40,8 @@
     "morgan": "^1.10.0",
     "nodemon": "^3.0.3",
     "react-icons": "^5.5.0",
-    "slugify": "^1.6.6"
+    "slugify": "^1.6.6",
+    "sonarqube": "^0.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
