@@ -899,7 +899,7 @@ describe("AdminOrders Component - Unit Tests Only", () => {
       .mockResolvedValueOnce({ data: {orders: initialOrders} }) // initial getOrders (useEffect)
       .mockResolvedValueOnce({ data: {orders: refreshedOrders} }); // getOrders called inside handleChange
 
-    axios.put.mockResolvedValueOnce({ data: { ok: true } });
+    axios.put.mockResolvedValueOnce({ data: { success: true } });
 
     render(<AdminOrders />);
 
