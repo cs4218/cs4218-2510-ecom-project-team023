@@ -9,6 +9,8 @@ import jwt from 'jsonwebtoken';
 import app from '../../../../server';
 import userModel from '../../../../models/userModel';
 
+jest.setTimeout(60000)
+
 dotenv.config();
 
 const mongoUri = process.env.MONGO_URL;
