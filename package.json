@@ -8,13 +8,21 @@
     "server": "nodemon server.js",
     "client": "npm start --prefix ./client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
+
     "sonarqube": "sonar-scanner",
-    "test": "npm run test:frontend && npm run test:backend",
-    "test:frontend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
-    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js",
+
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:all": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.config.js",
+    "test:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js",
+    "test:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js",
+
     "test:e2e": "NODE_ENV=test playwright test",
     "test:e2e:ui": "NODE_ENV=test playwright test --ui",
-    "test:e2e:headed": "playwright test -c playwright.config.ts --headed"
+    "test:e2e:headed": "NODE_ENV=test playwright test -c playwright.config.ts --headed",
+
+    "coverage": "npm run coverage:backend && npm run coverage:frontend",
+    "coverage:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js --coverage",
+    "coverage:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js --coverage"
   },
   "keywords": [],
   "author": "RP",
@@ -58,5 +66,4 @@
     "supertest": "^7.1.4",
     "typescript-eslint": "^8.41.0"
   }
-  
 }

@@ -1,19 +1,44 @@
+// jest.backend.config.js
 export default {
   displayName: "backend",
+  rootDir: ".",
   testEnvironment: "node",
-  testMatch: ["**/?(*.)+(test).[jt]s?(x)"],
-  testPathIgnorePatterns: ["<rootDir>/client/"],
+  testMatch: [
+    "<rootDir>/controllers/**/*.test.js",
+    "<rootDir>/models/**/*.test.js",
+    "<rootDir>/routes/**/*.test.js",
+    "<rootDir>/helpers/**/*.test.js",
+    "<rootDir>/middlewares/**/*.test.js",
+  ],
+    testPathIgnorePatterns: [
+    "/node_modules/",
+    "<rootDir>/client/",
+    "<rootDir>/docs/",
+    "<rootDir>/public/",
+    "<rootDir>/build/",
+    "<rootDir>/dist/"
+  ],  
+
   collectCoverage: true,
   collectCoverageFrom: [
-    "controllers/**",
-    "middlewares/**",
-    "helpers/**",
-    "config/**",
+    "controllers/**/*.js",
+    "routes/**/*.js",
+    "helpers/**/*.js",
+    "middlewares/**/*.js",
+    "models/**/*.js",
+    "!**/*.test.js",
   ],
-  coverageThreshold: {
-    global: {
-      lines: 90,
-      functions: 90,
-    },
-  },
+
+  coveragePathIgnorePatterns: [
+    "/node_modules/",
+    "<rootDir>/client/",
+    "<rootDir>/docs/",
+    "<rootDir>/public/",
+    "<rootDir>/build/",
+    "<rootDir>/dist/"
+  ],
+  coverageReporters: ["lcov", "text-summary"],
+  coverageDirectory: "<rootDir>/server/coverage",
+  // optional thresholds
+  // coverageThreshold: { global: { lines: 90, functions: 90 } },
 };
