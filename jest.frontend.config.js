@@ -1,41 +1,66 @@
+// jest.frontend.config.js (ESM)
 export default {
-  // name displayed during tests
   displayName: "frontend",
-
-  // simulates browser environment in jest
-  // e.g., using document.querySelector in your tests
   testEnvironment: "jest-environment-jsdom",
 
-  // jest does not recognise jsx files by default, so we use babel to transform any jsx files
-  transform: {
-    "^.+\\.jsx?$": "babel-jest",
-  },
+  transform: { "^.+\\.[jt]sx?$": "babel-jest" },
+  moduleNameMapper: { "\\.(css|less|scss|sass)$": "identity-obj-proxy" },
 
-  // tells jest how to handle css/scss imports in your tests
-  moduleNameMapper: {
-    "\\.(css|scss)$": "identity-obj-proxy",
-  },
+  // ✅ Only look for tests in your React app, not generated site
+  testMatch: ["<rootDir>/client/src/**/*.test.[jt]s?(x)"],
+  setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
 
-  // ignore all node_modules except styleMock (needed for css imports)
-  transformIgnorePatterns: ["/node_modules/(?!(styleMock\\.js)$)"],
-
-  // only run these tests
-  testMatch: ["<rootDir>/client/src/**/*.test.js"],
-
-  // jest code coverage
+  // ✅ Only instrument real app source; exclude tests & generated/built folders
   collectCoverage: true,
   collectCoverageFrom: [
-    "client/src/pages/**/**",
-    "client/src/components/**",
-    "client/src/context/**",
-    "client/src/context/**",
-    "client/src/hooks/**",
+    "client/src/**/*.{js,jsx,ts,tsx}",
+    "!client/src/**/*.test.[jt]s?(x)",
+    "!client/src/**/__tests__/**",
+    "!client/src/**/*.d.ts",
+    "!client/src/**/__generated__/**",
+    "!client/src/**/*.stories.[jt]sx?",
+    "!client/src/index.*",
+    "!client/src/main.*",
+    "!client/src/reportWebVitals.*",
+
+    // 🚫 EXCLUDE the generated MarkBind site output
+    "!client/src/_site/**"
   ],
-  coverageThreshold: {
-    global: {
-      lines: 90,
-      functions: 90,
-    },
-  },
-  setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
+
+  // Don’t traverse these for tests
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "<rootDir>/client/public/",
+    "<rootDir>/client/build/",
+    "<rootDir>/client/dist/",
+    "<rootDir>/client/out/",
+    "<rootDir>/client/.next/",
+    "<rootDir>/client/.markbind/",
+    "<rootDir>/client/docs/",
+    "<rootDir>/client/src/_site/",   // ⬅️ important
+    "<rootDir>/docs/",
+    "<rootDir>/public/",
+    "<rootDir>/build/",
+    "<rootDir>/dist/"
+  ],
+
+  // Don’t include these in coverage denominator either
+  coveragePathIgnorePatterns: [
+    "/node_modules/",
+    "<rootDir>/client/public/",
+    "<rootDir>/client/build/",
+    "<rootDir>/client/dist/",
+    "<rootDir>/client/out/",
+    "<rootDir>/client/.next/",
+    "<rootDir>/client/.markbind/",
+    "<rootDir>/client/docs/",
+    "<rootDir>/client/src/_site/",   // ⬅️ important
+    "<rootDir>/docs/",
+    "<rootDir>/public/",
+    "<rootDir>/build/",
+    "<rootDir>/dist/",
+    "<rootDir>/client/coverage/"
+  ],
+  coverageDirectory: "<rootDir>/coverage",
+  coverageThreshold: { global: { lines: 90, functions: 90 } },
 };
