@@ -259,6 +259,21 @@ describe("Orders.js Integration Tests with API", () => {
       expect(screen.queryByText("Status")).not.toBeInTheDocument();
     });
 
+    it("should correctly display orders even with failed payments", async () => {
+      await orderModel.create({
+        products: [prod1._id],
+        payment: { success: false }, // Failed payment
+        buyer: testUserA._id,
+        status: "Not Process",
+      });
+
+      setup();
+
+      await waitFor(() => {
+        expect(screen.getByText("Failed")).toBeInTheDocument();
+      });
+    });
+
     it("should not make API call and show 'no orders' when auth token is missing", () => {
       localStorage.clear(); // Ensure no auth token
       setup();
