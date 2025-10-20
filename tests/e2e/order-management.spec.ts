@@ -1,3 +1,4 @@
+// Tests are written with the help of AI.
 import { test, expect, type Page } from "@playwright/test";
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
