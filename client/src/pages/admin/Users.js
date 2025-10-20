@@ -89,7 +89,7 @@ const Users = () => {
                         <th scope="col">Joined</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody data-testid="user table">
                       {users.map((user, index) => (
                         <tr key={user._id}>
                           <th scope="row">
@@ -120,7 +120,7 @@ const Users = () => {
                   >
                     &laquo; Previous
                   </button>
-                  <span className="p-2">
+                  <span className="p-2" data-testid="pagination info">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
