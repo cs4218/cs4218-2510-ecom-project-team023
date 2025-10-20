@@ -13,9 +13,9 @@
     "test:all": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.config.js",
     "test:frontend": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
     "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js",
-    "test:e2e": "NODE_ENV=test playwright test",
-    "test:e2e:ui": "NODE_ENV=test playwright test --ui",
-    "test:e2e:headed": "NODE_ENV=test playwright test -c playwright.config.ts --headed",
+    "test:e2e": "cross-env playwright test",
+    "test:e2e:ui": "cross-env playwright test --ui",
+    "test:e2e:headed": "cross-env playwright test -c playwright.config.ts --headed",
     "coverage": "npm run coverage:backend && npm run coverage:frontend",
     "coverage:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js --coverage",
     "coverage:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js --coverage"
