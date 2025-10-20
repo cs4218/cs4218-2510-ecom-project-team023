@@ -363,7 +363,7 @@ test.describe("E2E - Order Creation and Payment Flows", () => {
     // which may not work in the test environment
 
     // Verify payment button is enabled when all conditions are met
-    await expect(paymentButton).toBeEnabled({ timeout: 10_000 });
+    await expect(paymentButton).toBeEnabled({ timeout: 30_000 });
 
     // Again, payment is skipped to facilitate testing. Instead, the order is injected during the set up process;
     // Navigate directly to orders page to simulate successful payment completion

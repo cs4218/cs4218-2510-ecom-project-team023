@@ -89,7 +89,11 @@ const AdminOrders = () => {
                               className="status-select"
                             >
                               {status.map((s, i) => (
-                                <Option key={i} value={s}>
+                                <Option
+                                  key={i}
+                                  value={s}
+                                  className="status-option"
+                                >
                                   {s}
                                 </Option>
                               ))}
