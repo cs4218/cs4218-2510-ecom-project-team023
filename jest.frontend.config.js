@@ -6,11 +6,11 @@ export default {
   transform: { "^.+\\.[jt]sx?$": "babel-jest" },
   moduleNameMapper: { "\\.(css|less|scss|sass)$": "identity-obj-proxy" },
 
-  // ✅ Only look for tests in your React app, not generated site
+  // Only look for tests in your React app, not generated site
   testMatch: ["<rootDir>/client/src/**/*.test.[jt]s?(x)"],
   setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
 
-  // ✅ Only instrument real app source; exclude tests & generated/built folders
+  // Only instrument real app source; exclude tests & generated/built folders
   collectCoverage: true,
   collectCoverageFrom: [
     "client/src/**/*.{js,jsx,ts,tsx}",
@@ -23,7 +23,7 @@ export default {
     "!client/src/main.*",
     "!client/src/reportWebVitals.*",
 
-    // 🚫 EXCLUDE the generated MarkBind site output
+    // EXCLUDE the generated MarkBind site output
     "!client/src/_site/**"
   ],
 
@@ -37,7 +37,7 @@ export default {
     "<rootDir>/client/.next/",
     "<rootDir>/client/.markbind/",
     "<rootDir>/client/docs/",
-    "<rootDir>/client/src/_site/",   // ⬅️ important
+    "<rootDir>/client/src/_site/",  
     "<rootDir>/docs/",
     "<rootDir>/public/",
     "<rootDir>/build/",
@@ -54,13 +54,13 @@ export default {
     "<rootDir>/client/.next/",
     "<rootDir>/client/.markbind/",
     "<rootDir>/client/docs/",
-    "<rootDir>/client/src/_site/",   // ⬅️ important
+    "<rootDir>/client/src/_site/",  
     "<rootDir>/docs/",
     "<rootDir>/public/",
     "<rootDir>/build/",
     "<rootDir>/dist/",
     "<rootDir>/client/coverage/"
   ],
-  coverageDirectory: "<rootDir>/coverage",
+  coverageDirectory: "<rootDir>/client/coverage",
   coverageThreshold: { global: { lines: 90, functions: 90 } },
 };

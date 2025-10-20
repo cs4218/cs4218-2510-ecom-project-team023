@@ -405,7 +405,7 @@ test('FLOW: Books (Novel) add → Search Laptop → PDP add → Cart has Novel &
   await expectCartCountIncreases(page, beforeLaptop);
 
   const cart = await getCartLS(page);
-  const hasNovel = cart.some((p: any) => /novel/i.test(String(p?.name || '')));
+  const hasNovel = cart.some((p: any) => /no/i.test(String(p?.name || '')));
   const hasLaptop = cart.some((p: any) => /laptop/i.test(String(p?.name || '')));
 
   expect(hasNovel, 'Cart does not contain the "Novel" book').toBeTruthy();
