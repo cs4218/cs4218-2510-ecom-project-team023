@@ -15,8 +15,8 @@ import userModel from "../../../../models/userModel.js";
 import productModel from "../../../../models/productModel.js";
 import orderModel from "../../../../models/orderModel.js";
 import { hashPassword } from "../../../../helpers/authHelper.js";
-import { AuthProvider } from "../../context/auth";
-import AdminOrders from "./AdminOrders";
+import { AuthProvider } from "../../context/auth.js";
+import AdminOrders from "./AdminOrders.js";
 import JWT from "jsonwebtoken";
 
 // MOCKS
