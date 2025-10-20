@@ -1,3 +1,4 @@
+// Some tests written with help of AI
 /**
  * FE↔BE “Sandwich” Integration Suite (single file)
  * - Bottom-Up: verify REST controllers via axios (no UI)
