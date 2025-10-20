@@ -137,7 +137,7 @@ test.describe("E2E - Order Management", () => {
     }
   });
 
-  test("FLOW: AAdmin user (Admin Orders page) - Admin views and manages orders", async ({ page }) => {
+  test("FLOW: Admin user (Admin Orders page) - Admin views and manages orders", async ({ page }) => {
     // Login as admin
     await loginUser(page, ADMIN_EMAIL, ADMIN_PW);
 
