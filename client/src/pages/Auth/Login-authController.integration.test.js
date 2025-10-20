@@ -37,7 +37,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await disconnectFromTestDb;
+  await disconnectFromTestDb();
 });
 
 describe("Login page integration tests with backend authController", () => {
@@ -76,8 +76,8 @@ describe("Login page integration tests with backend authController", () => {
   });
 
   afterEach(async () => {
-    await new Promise(res => setTimeout(res, 50));
-    await new Promise(resolve => server.close(resolve));
+    await new Promise((res) => setTimeout(res, 50));
+    await new Promise((resolve) => server.close(resolve));
   });
 
   const setup = () =>
@@ -94,7 +94,7 @@ describe("Login page integration tests with backend authController", () => {
       </MemoryRouter>
     );
 
-  test("✅ logs in successfully with valid credentials", async () => {
+  test("should log in successfully if given valid credentials", async () => {
     setup();
 
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
@@ -117,7 +117,7 @@ describe("Login page integration tests with backend authController", () => {
     expect(typeof stored.token).toBe("string");
   });
 
-  test("❌ shows 'Invalid Password' for wrong password", async () => {
+  test("should show toast error message if given wrong password", async () => {
     setup();
 
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
@@ -133,7 +133,7 @@ describe("Login page integration tests with backend authController", () => {
     );
   });
 
-  test("📧 shows 'Email is not registered' for non-existent user", async () => {
+  test("should show toast error message for non-existent user", async () => {
     setup();
 
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
