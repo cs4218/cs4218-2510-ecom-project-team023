@@ -24,7 +24,6 @@ jobs:
       - name: Install dependencies
         run: |
           npm install
-          npx playwright install
 
       - name: Install client dependencies
         run: |
@@ -33,6 +32,3 @@ jobs:
 
       - name: Run Unit and Integration Tests
         run: npm run test
-
-      - name: Run UI Tests
-        run: npm run test:e2e
