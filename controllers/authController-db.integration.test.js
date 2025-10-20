@@ -189,6 +189,23 @@ describe("GET /api/v1/auth/all-orders - True Integration Tests", () => {
 
     expect(response.status).toBe(401);
   });
+
+  it("should return 500 if a database error occurs", async () => {
+    // Spy on the Order model's find method and force it to throw an error
+    const findMock = jest.spyOn(Order, "find").mockImplementationOnce(() => {
+      throw new Error("Simulated Database Error");
+    });
+
+    const response = await request
+      .get("/api/v1/auth/all-orders")
+      .set("Authorization", adminToken);
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe("Error While Getting Orders");
+
+    findMock.mockRestore();
+  });
 });
 
 // True integration tests for getOrdersController
@@ -215,6 +232,22 @@ describe("GET /api/v1/auth/orders - True Integration Tests", () => {
     const response = await request.get("/api/v1/auth/orders");
 
     expect(response.status).toBe(401);
+  });
+
+  it("should return 500 if a database error occurs", async () => {
+    // Spy on the Order model's find method and force it to throw an error
+    const findMock = jest.spyOn(Order, "find").mockImplementationOnce(() => {
+      throw new Error("Simulated Database Error");
+    });
+
+    const response = await request
+      .get("/api/v1/auth/orders")
+      .set("Authorization", userToken);
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe("Error While Getting Orders");
+    findMock.mockRestore();
   });
 });
 
