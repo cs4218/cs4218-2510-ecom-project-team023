@@ -66,7 +66,7 @@ describe("Orders Component - Unit Tests Only", () => {
   });
 
   beforeEach(() => {
-    axios.get.mockResolvedValue({ data: [] });
+    axios.get.mockResolvedValue({ data: {orders: []} });
   });
 
   // RENDERING LOGIC TESTS
@@ -100,7 +100,7 @@ describe("Orders Component - Unit Tests Only", () => {
 
     it("renders empty state when no orders", async () => {
       // UNIT TEST: Tests rendering with empty orders array
-      axios.get.mockResolvedValue({ data: [] });
+      axios.get.mockResolvedValue({ data: {orders: []} });
       mockUseAuth.mockReturnValue([
         { token: "test-token", user: { name: "Test" } },
         jest.fn(),
@@ -194,7 +194,7 @@ describe("Orders Component - Unit Tests Only", () => {
           ],
         },
       ];
-      axios.get.mockResolvedValueOnce({ data: mockOrders });
+      axios.get.mockResolvedValueOnce({ data: {orders: mockOrders} });
       mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
 
       render(<Orders />);
@@ -243,7 +243,7 @@ describe("Orders Component - Unit Tests Only", () => {
           ],
         },
       ];
-      axios.get.mockResolvedValueOnce({ data: mockOrders });
+      axios.get.mockResolvedValueOnce({ data: {orders: mockOrders} });
 
       mockUseAuth.mockReturnValue([
         { token: "valid-token", user: { name: "Test User" } },
@@ -314,7 +314,7 @@ describe("Orders Component - Unit Tests Only", () => {
         },
       ];
 
-      axios.get.mockResolvedValue({ data: mockOrders });
+      axios.get.mockResolvedValue({ data: {orders: mockOrders} });
 
       render(<Orders />);
 
@@ -341,7 +341,7 @@ describe("Orders Component - Unit Tests Only", () => {
 
       it("should display 'Success' for payment.success = true", async () => {
         axios.get.mockResolvedValue({
-          data: [{ ...baseOrder, payment: { success: true } }],
+          data: {orders: [{ ...baseOrder, payment: { success: true } }]},
         });
 
         render(<Orders />);
@@ -353,7 +353,7 @@ describe("Orders Component - Unit Tests Only", () => {
 
       it("should display 'Failed' for payment.success = false", async () => {
         axios.get.mockResolvedValue({
-          data: [{ ...baseOrder, payment: { success: false } }],
+          data: {orders: [{ ...baseOrder, payment: { success: false } }]},
         });
 
         render(<Orders />);
@@ -364,7 +364,7 @@ describe("Orders Component - Unit Tests Only", () => {
       });
 
       it("should display 'Failed' when payment object is missing the success property", async () => {
-        axios.get.mockResolvedValue({ data: [{ ...baseOrder, payment: {} }] });
+        axios.get.mockResolvedValue({ data: {orders: [{ ...baseOrder, payment: {} }]} });
 
         render(<Orders />);
 
@@ -391,7 +391,7 @@ describe("Orders Component - Unit Tests Only", () => {
 
       it("should display quantity 0 for an empty products array", async () => {
         // UNIT TEST: Verifies that products is counted as 0 if empty
-        axios.get.mockResolvedValue({ data: [{ ...baseOrder, products: [] }] });
+        axios.get.mockResolvedValue({ data: {orders: [{ ...baseOrder, products: [] }]} });
 
         render(<Orders />);
 
@@ -403,7 +403,7 @@ describe("Orders Component - Unit Tests Only", () => {
         // UNIT TEST: Verifies that products is counted if not empty
         const products = [{ ...fakeProduct, _id: "prod1" }];
         axios.get.mockResolvedValue({
-          data: [{ ...baseOrder, products }],
+          data: {orders: [{ ...baseOrder, products }]},
         });
 
         render(<Orders />);
@@ -422,7 +422,7 @@ describe("Orders Component - Unit Tests Only", () => {
           { ...fakeProduct, _id: "prod2" },
           { ...fakeProduct, _id: "prod3" },
         ];
-        axios.get.mockResolvedValue({ data: [{ ...baseOrder, products }] });
+        axios.get.mockResolvedValue({ data: {orders: [{ ...baseOrder, products }]} });
 
         render(<Orders />);
 
@@ -623,7 +623,7 @@ describe("Orders Component - Unit Tests Only", () => {
           ],
         },
       ];
-      axios.get.mockResolvedValueOnce({ data: mockOrders });
+      axios.get.mockResolvedValueOnce({ data: {orders: mockOrders} });
       mockUseAuth.mockReturnValue([null, jest.fn()]);
 
       render(<Orders />);
@@ -666,7 +666,7 @@ describe("Orders Component - Unit Tests Only", () => {
           products: [],
         },
       ];
-      axios.get.mockResolvedValueOnce({ data: mockOrders });
+      axios.get.mockResolvedValueOnce({ data: {orders: mockOrders} });
       mockUseAuth.mockReturnValue([
         { token: "valid-token", user: { name: "Test User" } },
         jest.fn(),
@@ -747,7 +747,7 @@ describe("Orders Component - Unit Tests Only", () => {
         payment: { success: false },
         products: null,
       };
-      axios.get.mockResolvedValueOnce({ data: [malformedOrder] });
+      axios.get.mockResolvedValueOnce({ data: {orders: [malformedOrder]} });
       mockUseAuth.mockReturnValue([{ token: "valid-token" }, jest.fn()]);
 
       render(<Orders />);
