@@ -19,6 +19,7 @@ const HomePage = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const hasFilters = checked.length > 0 || radio.length > 0; // +++
 
   //get all cat
   const getAllCategory = async () => {
@@ -61,11 +62,13 @@ const HomePage = () => {
 
   useEffect(() => {
     if (page === 1) return;
+    if (hasFilters) return; // +++
     loadMore();
-  }, [page]);
+  }, [page, hasFilters]); // +++
   //load more
   const loadMore = async () => {
     try {
+      if (hasFilters) return; // +++
       setLoading(true);
       const { data } = await axios.get(`/api/v1/product/product-list/${page}`);
       setLoading(false);
@@ -84,6 +87,7 @@ const HomePage = () => {
     } else {
       all = all.filter((c) => c !== id);
     }
+    setPage(1); // +++
     setChecked(all);
   };
   useEffect(() => {
@@ -102,6 +106,7 @@ const HomePage = () => {
         radio,
       });
       setProducts(data?.products);
+      setTotal((data?.products || []).length); // +++
     } catch (error) {
       console.log(error);
     }
@@ -198,7 +203,7 @@ const HomePage = () => {
             ))}
           </div>
           <div className="m-2 p-3">
-            {products && products.length < total && (
+            {!hasFilters && products && products.length < total && ( // +++
               <button
                 className="btn loadmore"
                 onClick={(e) => {
