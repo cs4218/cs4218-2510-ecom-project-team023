@@ -22,12 +22,13 @@ jobs:
           node-version: '24'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
 
       - name: Install client dependencies
         run: |
           cd client
           npm install
 
-      - name: Run Jest tests
+      - name: Run Unit and Integration Tests
         run: npm run test
