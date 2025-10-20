@@ -190,12 +190,11 @@ test.describe("E2E - Order Management", () => {
 
         // Look for 'Shipped' option in any dropdown menu that appears
         const shippedOption = page
-          .locator("option, li, div, a, .status-option, .option, status-option")
-          .filter({ hasText: /Shipped/i })
+          .locator("option, li, div, a, .status-option, .option")
+          .filter({ hasText: /shipped/i })
           .first();
-        if ((await shippedOption.count()) > 0) {
-          await shippedOption.click();
-        }
+        
+        await shippedOption.click();
 
         // Wait for any potential status update request to complete
         await page.waitForTimeout(1000);
