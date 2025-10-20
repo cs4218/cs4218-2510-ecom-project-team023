@@ -1,94 +1,35 @@
-/**
- * @jest-environment node
- */
-
-// setup written with help from ChatGPT
 jest.setTimeout(30000);
 
 import request from "supertest";
-import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
-// ---- Make server.js connect to the in-memory DB ----
-jest.mock(require.resolve("../../../config/db.js"), () => ({
-  __esModule: true,
-  default: async () => {
-    const m = (await import("mongoose")).default;
-    await m.connect(process.env.MONGO_URL, { dbName: "ecom_frontend_int" });
-  },
-}));
+// Real app + real test DB helpers
+import app from "../../../server.js";
+import {
+  connectToTestDb,
+  resetTestDb,
+  disconnectFromTestDb,
+} from "../../../config/testdb.js";
 
-let app, mongod, Product, Category;
+// Ensure models are registered on the default mongoose connection
+import "../../../models/productModel.js";
+import "../../../models/categoryModel.js";
 
-const resolveApp = async () => {
-  const srvMod = await import("../../../server.js");
-  const candidates = [
-    srvMod,
-    srvMod?.default,
-    srvMod?.default?.default,
-    srvMod?.app,
-    srvMod?.default?.app,
-    srvMod?.server,
-    srvMod?.default?.server,
-  ];
-  const isExpress = (x) => typeof x === "function" && (x.handle || x.use);
-  const isHttp = (x) => x && typeof x.address === "function" && typeof x.close === "function";
-  for (const c of candidates) {
-    if (!c) continue;
-    if (isExpress(c) || isHttp(c)) return c;
-    if (c?.app && isExpress(c.app)) return c.app;
-    if (c?.server && isHttp(c.server)) return c.server;
-    if (typeof c === "function" && !c.handle && !c.address) {
-      try {
-        const maybe = c();
-        if (isExpress(maybe) || isHttp(maybe)) return maybe;
-        if (maybe?.app && isExpress(maybe.app)) return maybe.app;
-        if (maybe?.server && isHttp(maybe.server)) return maybe.server;
-      } catch {}
-    }
-  }
-  throw new Error("Could not resolve Express app/http.Server from server.js");
-};
+let Product, Category;
 
 beforeAll(async () => {
-  process.env.NODE_ENV = "test";
-
-  mongod = await MongoMemoryServer.create();
-  process.env.MONGO_URL = mongod.getUri();
-
-  // Clear any precompiled models across projects
-  if (typeof mongoose.deleteModel === "function") {
-    for (const name of ["Product", "Category", "Order", "orders", "User"]) {
-      try { mongoose.deleteModel(name); } catch {}
-    }
-  } else {
-    delete mongoose.models.Product;
-    delete mongoose.models.Category;
-    delete mongoose.models.User;
-    delete mongoose.models.Order;
-    delete mongoose.models.orders;
-  }
-
-  // Register schemas on the default connection
-  await import("../../../models/productModel.js");
-  await import("../../../models/categoryModel.js");
-
-  // Resolve the app/server after models are registered
-  app = await resolveApp();
-
-  // Pull compiled models from Mongoose registry (true Models)
+  process.env.NODE_ENV = "test"; // ensure server.js doesn't auto-connect elsewhere
+  await connectToTestDb("frontend-homepage-products");
   Product = mongoose.model("Product");
   Category = mongoose.model("Category");
 });
 
 afterAll(async () => {
-  if (mongoose.connection.readyState) await mongoose.disconnect();
-  if (mongod) await mongod.stop();
+  await disconnectFromTestDb();
 });
 
-afterEach(async () => {
-  const { collections } = mongoose.connection;
-  await Promise.all(Object.values(collections).map((c) => c.deleteMany({})));
+beforeEach(async () => {
+  await resetTestDb();
 });
 
 // ---------- helpers ----------
@@ -142,16 +83,13 @@ describe("HomePage ↔ ProductController (public endpoints)", () => {
     expect(reported).toBe(total);
   });
 
-  // ======= ONLY CHANGED TEST =======
   it("product-list paginates and overall union equals total", async () => {
     const { total } = await seedCatalog();
 
     // Crawl pages until empty, union all IDs
     const ids = new Set();
-    let page = 1;
     const safetyCap = 50; // prevents infinite loop on server bug
-
-    for (; page <= safetyCap; page++) {
+    for (let page = 1; page <= safetyCap; page++) {
       const r = await request(app).get(`/api/v1/product/product-list/${page}`);
       expect(r.status).toBe(200);
       const arr = extractProducts(r.body);
