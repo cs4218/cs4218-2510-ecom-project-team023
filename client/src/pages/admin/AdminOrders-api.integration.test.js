@@ -82,6 +82,24 @@ describe("AdminOrders.js Integration Tests with API", () => {
   });
 
   describe("API Integration Tests", () => {
+    it("should display 'No orders yet.' when API returns an empty list", async () => {
+      // ARRANGE
+      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
+      axios.get.mockResolvedValueOnce({
+        data: { success: true, orders: [] },
+      });
+
+      // ACT
+      render(<AdminOrders />);
+
+      // ASSERT
+      // Wait for the "No orders yet." text to appear
+      expect(await screen.findByText("No orders yet.")).toBeInTheDocument();
+
+      // Ensure no order data is rendered
+      expect(screen.queryByText("Status")).not.toBeInTheDocument();
+    });
+
     it("should fetch all orders from the correct API endpoint", async () => {
       // Setup auth mock
       useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);

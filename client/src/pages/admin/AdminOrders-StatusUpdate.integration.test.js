@@ -16,7 +16,7 @@ jest.mock("react-hot-toast", () => ({
   error: jest.fn(),
 }));
 
-// Mock the antd Select component to be a simple HTML select; 
+// Mock the antd Select component to be a simple HTML select;
 jest.mock("antd", () => {
   const antd = jest.requireActual("antd");
 
@@ -181,6 +181,45 @@ describe("AdminOrders.js Status Update Flow Integration Tests", () => {
       });
 
       toastSuccessSpy.mockRestore();
+    });
+
+    it("should show an error toast and not refresh if the PUT request fails", async () => {
+      // Setup API response mock
+      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
+
+      axios.get.mockResolvedValueOnce({ data: { orders: mockOrders } });
+      const errorMsg = "API Error";
+      axios.put.mockRejectedValueOnce(new Error(errorMsg));
+      const toastErrorSpy = jest.spyOn(toast, "error");
+      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+
+      render(<AdminOrders />);
+
+
+      await screen.findByText(mockOrders[0].buyer.name);
+      // Find and change the first dropdown
+      const firstDropdown = screen.getByTestId("status-select-0");
+      fireEvent.change(firstDropdown, { target: { value: "Shipped" } });
+
+      await waitFor(() => {
+        expect(axios.put).toHaveBeenCalledWith(
+          `/api/v1/auth/order-status/${mockOrders[0]._id}`,
+          { status: "Shipped" }
+        );
+      });
+
+      expect(toastErrorSpy).toHaveBeenCalledWith(
+        "Something went wrong updating order status"
+      );
+
+      expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
+
+      // Check that the GET call was NOT made a second time (no refresh)
+      expect(axios.get).toHaveBeenCalledTimes(1); // Only the initial load
+
+      // CLEANUP
+      toastErrorSpy.mockRestore();
+      consoleSpy.mockRestore();
     });
 
     it("should handle status update error gracefully", async () => {
