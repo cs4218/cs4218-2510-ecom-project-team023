@@ -1,16 +1,19 @@
-import mongoose from "mongoose";
 import request from "supertest";
-import { MongoMemoryServer } from "mongodb-memory-server";
 import userModel from "../models/userModel.js";
+import {
+  connectToTestDb,
+  disconnectFromTestDb,
+  resetTestDb,
+} from "../config/testdb.js";
 
 // mock the DB connection to use mongodb-memory-server later
-jest.mock(require.resolve("../config/db.js"), () => ({
-  __esModule: true,
-  default: async () => {
-    const m = (await import("mongoose")).default;
-    await m.connect(process.env.MONGO_URL, { dbName: "ecom_auth_int" });
-  },
-}));
+// jest.mock(require.resolve("../config/db.js"), () => ({
+//   __esModule: true,
+//   default: async () => {
+//     const m = (await import("mongoose")).default;
+//     await m.connect(process.env.MONGO_URL, { dbName: "ecom_auth_int" });
+//   },
+// }));
 
 const resolveApp = async () => {
   const srvMod = await import("../server.js");
@@ -41,28 +44,21 @@ const resolveApp = async () => {
   throw new Error("Could not resolve Express app/http.Server from server.js");
 };
 
-let app, mongoServer;
+let app;
 
 beforeAll(async () => {
-  process.env.NODE_ENV = "test";
-
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  process.env.MONGO_URL = uri;
+  await connectToTestDb("authController_db_int");
 
   app = await resolveApp();
 });
 
 afterAll(async () => {
-  // Clean up
-  await mongoose.disconnect();
-  await mongoServer.stop();
+  disconnectFromTestDb();
 });
 
 // global beforeEach to clear users collection
 beforeEach(async () => {
-  // Ensure isolation between tests
-  await userModel.deleteMany({});
+  await resetTestDb();
 });
 
 describe("RegisterController and Database integration tests", () => {
