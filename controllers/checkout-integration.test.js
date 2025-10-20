@@ -4,7 +4,7 @@ import request from "supertest";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
 // ---- Mock DB connector exactly as server.js imports it -----------------
-jest.mock(require.resolve("./config/db.js"), () => ({
+jest.mock(require.resolve("../config/db.js"), () => ({
   __esModule: true,
   default: async () => {
     const mongooseMod = (await import("mongoose")).default;
@@ -92,13 +92,13 @@ describe("Checkout Integration • Product → Payment → Stock & Order", () =>
     }
 
     // 3) Explicitly import model files so they register on default connection
-    const productPath = require.resolve("./models/productModel.js");
-    const orderPath   = require.resolve("./models/orderModel.js");
+    const productPath = require.resolve("../models/productModel.js");
+    const orderPath   = require.resolve("../models/orderModel.js");
     await import(productPath);
     await import(orderPath);
 
     // 4) Import app robustly (works with default/app/server/factory/nested-default)
-    const srvMod = await import("./server.js");
+    const srvMod = await import("../server.js");
     const candidates = [
       srvMod,
       srvMod?.default,
