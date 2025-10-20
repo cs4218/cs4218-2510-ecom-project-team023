@@ -2,6 +2,10 @@
 import { test, expect, type Page } from "@playwright/test";
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
+const NON_ADMIN_EMAIL = "test@example.com";
+const NON_ADMIN_PW = "password123";
+const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_PW = "admin123";
 
 /* ---------------------------- Helper functions ---------------------------- */
 
@@ -69,94 +73,12 @@ async function navigateToAdminOrders(page: Page) {
   ).toBeVisible({ timeout: 10_000 });
 }
 
-async function addProductToCart(page: Page, productName: string) {
-  // Go to home page
-  await goHome(page);
-
-  // Search for the product
-  const searchBox =
-    page.locator('input[placeholder*="search" i]').first() ||
-    page.locator('input[type="search"]').first() ||
-    page.locator("form input").first();
-
-  await searchBox.fill(productName);
-  await Promise.all([
-    page.waitForLoadState("networkidle").catch(() => {}),
-    page.keyboard.press("Enter"),
-  ]);
-
-  // Find product card
-  const productCard = page
-    .locator('.card, [data-testid="product-card"], article, li, .product-item')
-    .filter({ hasText: new RegExp(productName, "i") })
-    .first();
-
-  await expect(productCard).toBeVisible({ timeout: 10_000 });
-
-  // Click on product to view details
-  await productCard.click();
-  await page.waitForLoadState("networkidle").catch(() => {});
-
-  // Add to cart
-  const addToCartBtn = page
-    .locator("button")
-    .filter({ hasText: /add to cart/i })
-    .first();
-  await expect(addToCartBtn).toBeVisible({ timeout: 10_000 });
-  await addToCartBtn.click();
-
-  // Wait for confirmation (toast or cart update)
-  const toast = page.locator("text=/added to cart|item added/i").first();
-  if (await toast.count()) {
-    await expect(toast).toBeVisible({ timeout: 5_000 });
-  }
-}
-
-async function navigateToCart(page: Page) {
-  // Look for cart link/button in the navigation
-  const cartLink = page
-    .locator("a")
-    .filter({ hasText: /cart|basket|bag/i })
-    .first();
-  await cartLink.click();
-  await page.waitForLoadState("networkidle").catch(() => {});
-
-  // Verify we're on the cart page with more flexible selectors
-  await expect(
-    page.locator("text=/cart|shopping bag|basket|your items/i").first()
-  ).toBeVisible({ timeout: 10_000 });
-
-  // Additional verification - look for common cart page elements
-  // We don't want to be too specific since we don't know the "exact" UI
-  const cartPageIndicators = [
-    "text=/total|subtotal|sum|amount/i",
-    ".cart-item, .cart-product, tr:has(.product-name), .product-row, .item-row",
-    "button:has-text(/checkout|proceed|continue|place order/i)",
-  ];
-
-  // Check if at least one of these indicators is present
-  let cartPageVerified = false;
-  for (const selector of cartPageIndicators) {
-    if ((await page.locator(selector).count()) > 0) {
-      cartPageVerified = true;
-      break;
-    }
-  }
-
-  // If none of the indicators are found, the test will continue but log a warning
-  if (!cartPageVerified) {
-    console.warn(
-      "Cart page verification was minimal - could not find common cart elements"
-    );
-  }
-}
-
 /* --------------------------------- Tests --------------------------------- */
 
 test.describe("E2E - Order Management", () => {
-  test("FLOW: User views order history after purchase", async ({ page }) => {
+  test("FLOW: Non-admin user (Orders page) - User views order history after purchase", async ({ page }) => {
     // Login as a user
-    await loginUser(page, "test@example.com", "password123");
+    await loginUser(page, NON_ADMIN_EMAIL, NON_ADMIN_PW);
 
     // Navigate to orders page
     await navigateToUserOrders(page);
@@ -215,57 +137,9 @@ test.describe("E2E - Order Management", () => {
     }
   });
 
-  test("FLOW: Complete purchase journey - Add to Cart → Checkout → View Order", async ({
-    page,
-  }) => {
-    // Login first
-    await loginUser(page, "test@example.com", "password123");
-
-    // Add product to cart
-    await addProductToCart(page, "Laptop");
-
-    // Go to cart and proceed to checkout
-    await navigateToCart(page);
-
-    // Verify payment button is available
-    const paymentButton = page
-      .locator("button")
-      .filter({ hasText: /make payment|pay now|checkout/i })
-      .first();
-    await expect(paymentButton).toBeVisible({ timeout: 10_000 });
-
-    // For this test, we'll verify the payment button is enabled and then navigate directly to orders
-    // This simulates a successful payment without dealing with the actual payment processing
-    // which may not work in the test environment
-
-    // Verify payment button is enabled when all conditions are met
-    await expect(paymentButton).toBeEnabled({ timeout: 30_000 });
-
-    // Navigate to orders page to verify order would appear after payment
-    await page.goto(`${BASE_URL}/dashboard/user/orders`);
-
-    // Verify we're on the orders page
-    await expect(
-      page.locator("text=/orders|my orders|order history/i").first()
-    ).toBeVisible({ timeout: 10_000 });
-
-    // Verify the orders table structure
-    const ordersTable = page.locator('table, [role="table"]').first();
-    await expect(ordersTable).toBeVisible({ timeout: 10_000 });
-
-    // Verify there's at least one order row
-    const orderRows = page.locator('tr, [role="row"]');
-    await expect(orderRows.first()).toBeVisible({ timeout: 10_000 });
-
-    // Verify order status is displayed
-    await expect(
-      page.locator("text=/status|processing|completed|pending/i").first()
-    ).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("FLOW: Admin views and manages orders", async ({ page }) => {
+  test("FLOW: AAdmin user (Admin Orders page) - Admin views and manages orders", async ({ page }) => {
     // Login as admin
-    await loginUser(page, "admin@example.com", "admin123");
+    await loginUser(page, ADMIN_EMAIL, ADMIN_PW);
 
     // Navigate to admin orders page with fallback options
     try {

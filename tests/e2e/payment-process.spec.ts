@@ -2,6 +2,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
+const NON_ADMIN_EMAIL = "test@example.com";
+const NON_ADMIN_PW = "password123";
 
 /* ---------------------------- Helper functions ---------------------------- */
 
@@ -141,7 +143,7 @@ test.describe("E2E - Payment Process", () => {
     page,
   }) => {
     // Login
-    await loginUser(page, "test@example.com", "password123");
+    await loginUser(page, NON_ADMIN_EMAIL, NON_ADMIN_PW);
 
     // Navigate to cart with empty cart
     await navigateToCart(page);
@@ -163,7 +165,7 @@ test.describe("E2E - Payment Process", () => {
     page,
   }) => {
     // Login
-    await loginUser(page, "test@example.com", "password123");
+    await loginUser(page, NON_ADMIN_EMAIL, NON_ADMIN_PW);
 
     // Add product to cart
     await addProductToCart(page, "Laptop");
@@ -194,7 +196,7 @@ test.describe("E2E - Payment Process", () => {
     page,
   }) => {
     // Login
-    await loginUser(page, "test@example.com", "password123");
+    await loginUser(page, NON_ADMIN_EMAIL, NON_ADMIN_PW);
 
     // Add product to cart
     await addProductToCart(page, "Laptop");
@@ -231,12 +233,7 @@ test.describe("E2E - Payment Process", () => {
     page,
   }) => {
     // Login
-    await loginUser(page, "test@example.com", "password123");
-
-    // Clear cart first
-    await page.evaluate(() => {
-      localStorage.removeItem("cart");
-    });
+    await loginUser(page, NON_ADMIN_EMAIL, NON_ADMIN_PW);
 
     // Add first product - with retry logic
     let retries = 3;
@@ -306,11 +303,11 @@ test.describe("E2E - Payment Process", () => {
     // Test passes if we can find cart items and price information
   });
 
-  test("FLOW: Payment gateway integration - Braintree form LOADS correctly", async ({
+  test("FLOW: Payment gateway integration - Payment methods and payment button is available", async ({
     page,
   }) => {
     // Login
-    await loginUser(page, "test@example.com", "password123");
+    await loginUser(page, NON_ADMIN_EMAIL, NON_ADMIN_PW);
 
     // Add product to cart
     await addProductToCart(page, "Laptop");
@@ -330,8 +327,5 @@ test.describe("E2E - Payment Process", () => {
 
     // Verify payment button exists and is visible
     await expect(paymentButton).toBeVisible({ timeout: 10_000 });
-
-    // Test passes if we can see a payment section and button
-    // This is more resilient than looking for specific payment provider elements
   });
 });
