@@ -29,5 +29,8 @@ jobs:
           cd client
           npm install
 
-      - name: Run Jest tests
+      - name: Run Unit and Integration Tests
         run: npm run test
+
+      - name: Run UI Tests
+        run: npm run test:e2e
