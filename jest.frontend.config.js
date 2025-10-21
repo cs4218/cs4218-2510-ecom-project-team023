@@ -12,6 +12,7 @@ export default {
   // Only look for tests in your React app, not generated site
   testMatch: ["<rootDir>/client/src/**/*.test.[jt]s?(x)"],
   setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
+  "setupFiles": ["<rootDir>/jest.polyfills.js"],
 
   // Only instrument real app source; exclude tests & generated/built folders
   collectCoverage: true,

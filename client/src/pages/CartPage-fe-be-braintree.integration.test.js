@@ -12,10 +12,9 @@ import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import axios from "axios";
-import toast from "react-hot-toast";
 
 /* -------------------- MOCK SERVER-SIDE BRAINTREE (IMPORTANT) -------------------- */
-/* Must be defined BEFORE importing server.js so the backend uses this mock */
+/* Must be declared BEFORE importing server.js so the backend uses this mock */
 const mockBtSale = jest.fn((payload, cb) =>
   cb(null, {
     success: true,
@@ -60,9 +59,9 @@ import categoryModel from "../../../models/categoryModel.js";
 import { hashPassword } from "../../../helpers/authHelper.js";
 
 /* -------------------- Page under test -------------------- */
-import CartPage from "./CartPage";
+import CartPage from "./CartPage.js";
 
-/* ---------------- Stable UI mocks (like your Login test) ---------------- */
+/* ---------------- Stable UI mocks (match your other FE tests) ---------------- */
 jest.mock("../components/Layout", () => ({ children }) => (
   <div data-testid="layout">{children}</div>
 ));
@@ -73,7 +72,7 @@ jest.mock("react-hot-toast", () => ({
 }));
 
 /* ------------------------- Mock only the hooks -------------------------- */
-// Auth hook
+// Auth hook (provide user + token)
 jest.mock("../context/auth", () => {
   const setAuth = jest.fn();
   let state = [{ user: null, token: "" }, setAuth]; // [auth, setAuth]
@@ -82,7 +81,7 @@ jest.mock("../context/auth", () => {
   return { useAuth, __setAuthState };
 });
 
-// Cart hook
+// Cart hook (provide cart items)
 jest.mock("../context/cart", () => {
   const setCart = jest.fn();
   let state = [[], setCart]; // [cart, setCart]
@@ -146,7 +145,7 @@ const waitForPayEnabled = async () => {
 /* --------------------------------- Lifecycle ---------------------------- */
 beforeAll(async () => {
   jest.setTimeout(30000);
-  await connectToTestDb("cart_checkout_fe_be_int");
+  await connectToTestDb("fe_be_cart_checkout_int");
 });
 
 afterAll(async () => {
@@ -162,7 +161,7 @@ beforeEach(async () => {
   port = server.address().port;
   axios.defaults.baseURL = `http://localhost:${port}`;
 
-  // Seed category + products
+  // Seed category + products (NOTE: price matches UI payload to avoid 422 on happy path)
   const cat = await categoryModel.create({
     name: "Peripherals",
     slug: "peripherals",
@@ -172,7 +171,7 @@ beforeEach(async () => {
       name: "Laptop",
       slug: "laptop",
       description: "Powerful",
-      price: 899, // 👈 match what the UI posts to avoid 422 on the happy path
+      price: 899, // match what CartPage posts
       quantity: 10,
       category: cat._id,
       shipping: 1,
@@ -254,8 +253,8 @@ afterEach(async () => {
 });
 
 /* ---------------------------------- Tests -------------------------------- */
-describe("CartPage • FE↔BE checkout (hooks mocked, network real)", () => {
-  test("happy path: token fetched, drop-in shown, payment succeeds, cart clears", async () => {
+describe("CartPage • FE↔BE checkout (UI→axios→server→DB)", () => {
+  test("happy path: token fetched, drop-in shown, payment succeeds → cart clears", async () => {
     renderWithRouter(<CartPage />);
 
     // client token fetched → drop-in visible
@@ -282,7 +281,7 @@ describe("CartPage • FE↔BE checkout (hooks mocked, network real)", () => {
     );
   });
 
-  test("gateway declines (mismatched price) → error toast optional, UI remains", async () => {
+  test("price mismatch (server validation) → rejects and UI stays", async () => {
     // mismatch first item so backend rejects pre-sale
     const current = JSON.parse(window.localStorage.getItem("cart"));
     current[0].price = current[0].price - 100; // force mismatch

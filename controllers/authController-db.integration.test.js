@@ -62,7 +62,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  disconnectFromTestDb();
+  await disconnectFromTestDb();
 });
 
 // global beforeEach to clear users collection

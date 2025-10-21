@@ -24,6 +24,7 @@
   "author": "RP",
   "license": "ISC",
   "dependencies": {
+    "ah": "^1.6.0",
     "bcrypt": "^5.1.1",
     "braintree": "^3.22.0",
     "colors": "^1.4.0",
