@@ -286,13 +286,22 @@ describe("Orders.js Integration Tests with API", () => {
 
     it("should handle API error gracefully", async () => {
       // Temporarily break the server route
-      const originalGet = app.get;
-      app.get = jest.fn((path, ...handlers) => {
-        if (path === "/api/v1/auth/orders") {
-          return (req, res) =>
-            res.status(500).send({ message: "Server Error" });
-        }
-        return originalGet.call(app, path, ...handlers);
+      // Original approach. However, Express routes are registered at app initialization and
+      // reassigning app.get doesn't affect already-registered routes.
+      // const originalGet = app.get;
+      // app.get = jest.fn((path, ...handlers) => {
+      //   if (path === "/api/v1/auth/orders") {
+      //     return (req, res) =>
+      //       res.status(500).send({ message: "Server Error" });
+      //   }
+      //   return originalGet.call(app, path, ...handlers);
+      // });
+
+      const axiosGetSpy = jest.spyOn(axios, "get").mockRejectedValueOnce({
+        response: {
+          status: 500,
+          data: { success: false, message: "Server Error" },
+        },
       });
 
       setup();
@@ -303,7 +312,8 @@ describe("Orders.js Integration Tests with API", () => {
         ).toBeInTheDocument();
       });
 
-      app.get = originalGet; // Restore original route handler
+      axiosGetSpy.mockRestore();
+      // app.get = originalGet; // Restore original route handler
     });
   });
 });
