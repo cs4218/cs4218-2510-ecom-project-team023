@@ -12,15 +12,6 @@ import { hashPassword } from "../helpers/authHelper.js";
 import mongoose from "mongoose";
 import supertest from "supertest";
 
-// mock the DB connection to use mongodb-memory-server later
-// jest.mock(require.resolve("../config/db.js"), () => ({
-//   __esModule: true,
-//   default: async () => {
-//     const m = (await import("mongoose")).default;
-//     await m.connect(process.env.MONGO_URL, { dbName: "ecom_auth_int" });
-//   },
-// }));
-
 const resolveApp = async () => {
   const srvMod = await import("../server.js");
   const candidates = [
@@ -62,7 +53,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  disconnectFromTestDb();
+  await disconnectFromTestDb();
 });
 
 // global beforeEach to clear users collection
