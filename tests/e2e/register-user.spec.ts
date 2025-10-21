@@ -6,7 +6,9 @@ test.describe("User Registration Flow UI tests", () => {
   });
 
   // Happy path: register new user → redirect to login → login successfully
-  test("FLOW: user registration → login successfully → logout", async ({ page }) => {
+  test("FLOW: user registration → login successfully → logout", async ({
+    page,
+  }) => {
     const uniqueEmail = `testuser_${Date.now()}@example.com`;
 
     await test.step("Fill registration form", async () => {
@@ -44,9 +46,7 @@ test.describe("User Registration Flow UI tests", () => {
     });
 
     await test.step("Logout user", async () => {
-      await page
-        .getByRole("button", { name: "TEST USER" })
-        .click();
+      await page.getByRole("button", { name: "TEST USER" }).click();
       await page.getByRole("link", { name: "LOGOUT" }).click();
 
       await expect(page).toHaveURL("/login");
