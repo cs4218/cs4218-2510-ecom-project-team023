@@ -96,7 +96,8 @@ describe("Register page integration tests with backend authController", () => {
         "Registered successfully, please login"
       )
     );
-    expect(screen.getByText("Login Page")).toBeInTheDocument();
+    const loginPageText = await screen.findByText("Login Page");
+    expect(loginPageText).toBeInTheDocument();
     expect(axiosPostSpy).toHaveBeenCalledTimes(1);
     expect(axiosPostSpy).toHaveBeenCalledWith(
       "/api/v1/auth/register",
