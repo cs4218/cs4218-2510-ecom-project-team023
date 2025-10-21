@@ -218,11 +218,14 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 ---
 
 #### Dominic
-| Integration test files                                                 | UI Test files  |
-|--------------------------------------------------------------------------------------------|---------------------------------|
-|  | |
-| |  |
-|  | |
+| **Integration Test Files**                                                  | **UI Test Files**                          |
+| --------------------------------------------------------------------------- | ------------------------------------------ |
+| `client/src/pages/CartPage-ProductController-checkout.integration.test.js`  | `client/tests/e2e/product-details.spec.ts` |
+| `client/src/pages/Product-listing-crud-nonAdmin.integration.test.js`        |                                            |
+| `client/src/pages/Product-photo-category-crud-nonAdmin.integration.test.js` |                                            |
+| `client/src/pages/Products-crud-nonAdmin.integration.test.js`               |                                            |
+| `client/src/pages/CartPage-fe-be-braintree.integration.test.js`             |                                            |
+| `client/src/pages/checkout-integration.test.js`                             |                                            |
 
 ---
 
