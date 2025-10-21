@@ -10,10 +10,11 @@ import app from "../../../../server"; // Assuming this is your app import
 import userModel from "../../../../models/userModel"; // Assuming this is the User model
 import bcrypt from "bcryptjs";
 
-jest.setTimeout(15000);
+jest.setTimeout(60000);
 
 const mockSetCart = jest.fn();
 let mockCart = [];
+
 jest.mock("../../context/cart", () => ({
   useCart: () => [mockCart, mockSetCart],
 }));

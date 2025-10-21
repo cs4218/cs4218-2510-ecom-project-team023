@@ -144,9 +144,9 @@ const CartPage = () => {
       <div className=" cart-page">
         <div className="row">
           <div className="col-md-12">
-            <h1 className="text-center bg-light p-2 mb-1">
+            <h1 className="text-center bg-light p-2 mb-1" data-testid="cart_user">
               {!auth?.user ? "Hello Guest" : `Hello  ${auth?.token && auth?.user?.name}`}
-              <p className="text-center">
+              <p className="text-center" data-testid="cart_description">
                 {cart?.length
                   ? `You Have ${cart.length} items in your cart ${
                       auth?.token ? "" : "please login to checkout !"
@@ -160,7 +160,7 @@ const CartPage = () => {
           <div className="row ">
             <div className="col-md-7  p-0 m-0">
               {cart?.map((p, i) => (
-                <div className="row card flex-row" key={`${p._id}_${i}`}>
+                <div className="row card flex-row" key={`${p._id}_${i}`} data-testid={`${p._id}`}>
                   <div className="col-md-4">
                     <img
                       src={`/api/v1/product/product-photo/${p._id}`}
@@ -171,9 +171,9 @@ const CartPage = () => {
                     />
                   </div>
                   <div className="col-md-4">
-                    <p>{p.name}</p>
+                    <p data-testid={`${p._id}-name`}>{p.name}</p>
                     <p>{p.description.substring(0, 30)}</p>
-                    <p>Price : {p.price}</p>
+                    <p data-testid={`${p._id}-price`}>Price : {p.price}</p>
                   </div>
                   <div className="col-md-4 cart-remove-btn">
                     <button
@@ -191,7 +191,7 @@ const CartPage = () => {
               <h2>Cart Summary</h2>
               <p>Total | Checkout | Payment</p>
               <hr />
-              <h4>Total : {totalPrice()} </h4>
+              <h4 data-testid="total_price">Total : {totalPrice()} </h4>
               {auth?.user?.address ? (
                 <>
                   <div className="mb-3">
