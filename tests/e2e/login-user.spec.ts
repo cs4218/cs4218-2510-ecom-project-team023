@@ -10,7 +10,7 @@ const ADMIN_EMAIL = "testadmin@admin.com";
 const ADMIN_PW = "password";
 const ADMIN_PHONE = "123456";
 
-test.describe("User Login + Forgot Password Flows UI tests", () => {
+test.describe("User Login Flows UI tests", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/login");
   });

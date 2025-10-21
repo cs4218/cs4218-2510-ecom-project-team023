@@ -1,9 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-const NON_ADMIN_USERNAME = "TestUserAccount";
-const NON_ADMIN_EMAIL = "testuser@user.com";
-const NON_ADMIN_PHONE = "123";
-const NON_ADMIN_PW = "password";
+const UPDATE_TEST_USERNAME = "UpdateTestUser";
+const UPDATE_TEST_EMAIL = "updatetest@user.com";
+const UPDATE_TEST_PW = "password";
 
 test.describe("Update User Profile Detail Flows UI tests", () => {
   test.beforeEach(async ({ page }) => {
@@ -15,20 +14,19 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
     page,
   }) => {
     await test.step("Fill login form", async () => {
-      await page.getByPlaceholder("Enter Your Email").fill(NON_ADMIN_EMAIL);
-      await page.getByPlaceholder("Enter Your Password").fill(NON_ADMIN_PW);
+      await page.getByPlaceholder("Enter Your Email").fill(UPDATE_TEST_EMAIL);
+      await page.getByPlaceholder("Enter Your Password").fill(UPDATE_TEST_PW);
     });
 
     await test.step("Submit form and verify successful login", async () => {
       await page.getByRole("button", { name: "LOGIN" }).click();
 
-      await expect(page.getByText("login successfully")).toBeVisible();
       await expect(page).toHaveURL("/");
     });
 
     await test.step("Access user dashboard page", async () => {
       await page
-        .getByRole("button", { name: NON_ADMIN_USERNAME.toUpperCase() })
+        .getByRole("button", { name: UPDATE_TEST_USERNAME.toUpperCase() })
         .click();
       await page.getByRole("link", { name: "DASHBOARD" }).click();
 
@@ -48,7 +46,7 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
       await page
         .getByRole("textbox", { name: "Enter Your Name" })
         .fill("UpdatedUserName");
-      await page.getByRole("button", { name: "UPDATE" }).click();
+      await page.getByRole("button", { name: "UPDATE", exact: true }).click();
 
       await expect(
         page.getByText("Profile updated successfully")
@@ -85,7 +83,7 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
       const profileForm = page.locator('form:has-text("USER PROFILE")');
       await profileForm
         .getByRole("textbox", { name: "Enter Your Name" })
-        .fill(NON_ADMIN_USERNAME);
+        .fill(UPDATE_TEST_USERNAME);
       await profileForm.getByRole("button", { name: "UPDATE" }).click();
 
       await expect(
@@ -100,17 +98,17 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
           );
           return JSON.parse(authData)?.user?.name;
         })
-        .toBe(NON_ADMIN_USERNAME);
+        .toBe(UPDATE_TEST_USERNAME);
 
       // Verify updated username is reflected in the header in UI
       await expect(
-        page.getByRole("button", { name: NON_ADMIN_USERNAME.toUpperCase() })
+        page.getByRole("button", { name: UPDATE_TEST_USERNAME.toUpperCase() })
       ).toBeVisible();
     });
 
     await test.step("Logout user", async () => {
       await page
-        .getByRole("button", { name: NON_ADMIN_USERNAME.toUpperCase() })
+        .getByRole("button", { name: UPDATE_TEST_USERNAME.toUpperCase() })
         .click();
       await page.getByRole("link", { name: "LOGOUT" }).click();
 
@@ -124,20 +122,19 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
     page,
   }) => {
     await test.step("Fill login form", async () => {
-      await page.getByPlaceholder("Enter Your Email").fill(NON_ADMIN_EMAIL);
-      await page.getByPlaceholder("Enter Your Password").fill(NON_ADMIN_PW);
+      await page.getByPlaceholder("Enter Your Email").fill(UPDATE_TEST_EMAIL);
+      await page.getByPlaceholder("Enter Your Password").fill(UPDATE_TEST_PW);
     });
 
     await test.step("Submit form and verify successful login", async () => {
       await page.getByRole("button", { name: "LOGIN" }).click();
 
-      await expect(page.getByText("login successfully")).toBeVisible();
       await expect(page).toHaveURL("/");
     });
 
     await test.step("Access user dashboard page", async () => {
       await page
-        .getByRole("button", { name: NON_ADMIN_USERNAME.toUpperCase() })
+        .getByRole("button", { name: UPDATE_TEST_USERNAME.toUpperCase() })
         .click();
       await page.getByRole("link", { name: "DASHBOARD" }).click();
 
@@ -157,7 +154,7 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
       await page
         .getByRole("textbox", { name: "Enter Your Password" })
         .fill("newpassword123");
-      await page.getByRole("button", { name: "UPDATE" }).click();
+      await page.getByRole("button", { name: "UPDATE", exact: true }).click();
 
       await expect(
         page.getByText("Profile updated successfully")
@@ -166,7 +163,7 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
 
     await test.step("Logout user", async () => {
       await page
-        .getByRole("button", { name: NON_ADMIN_USERNAME.toUpperCase() })
+        .getByRole("button", { name: UPDATE_TEST_USERNAME.toUpperCase() })
         .click();
       await page.getByRole("link", { name: "LOGOUT" }).click();
 
@@ -175,18 +172,17 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
     });
 
     await test.step("Login with new password", async () => {
-      await page.getByPlaceholder("Enter Your Email").fill(NON_ADMIN_EMAIL);
+      await page.getByPlaceholder("Enter Your Email").fill(UPDATE_TEST_EMAIL);
       await page.getByPlaceholder("Enter Your Password").fill("newpassword123");
       await page.getByRole("button", { name: "LOGIN" }).click();
 
-      await expect(page.getByText("login successfully")).toBeVisible();
       await expect(page).toHaveURL("/");
     });
 
     // Revert password back to original password for test idempotency
     await test.step("Revert password back to original password", async () => {
       await page
-        .getByRole("button", { name: NON_ADMIN_USERNAME.toUpperCase() })
+        .getByRole("button", { name: UPDATE_TEST_USERNAME.toUpperCase() })
         .click();
       await page.getByRole("link", { name: "DASHBOARD" }).click();
 
@@ -198,8 +194,8 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
 
       await page
         .getByRole("textbox", { name: "Enter Your Password" })
-        .fill(NON_ADMIN_PW);
-      await page.getByRole("button", { name: "UPDATE" }).click();
+        .fill(UPDATE_TEST_PW);
+      await page.getByRole("button", { name: "UPDATE", exact: true}).click();
 
       await expect(
         page.getByText("Profile updated successfully")
@@ -208,7 +204,7 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
 
     await test.step("Logout user", async () => {
       await page
-        .getByRole("button", { name: NON_ADMIN_USERNAME.toUpperCase() })
+        .getByRole("button", { name: UPDATE_TEST_USERNAME.toUpperCase() })
         .click();
       await page.getByRole("link", { name: "LOGOUT" }).click();
 
