@@ -122,7 +122,7 @@ describe("Auth Middleware Tests", () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    test("should send 401 and log error if DB lookup throws error", async () => {
+    test("should send 500 and log error if DB lookup throws error", async () => {
       const consoleSpy = jest
         .spyOn(console, "log")
         .mockImplementation(() => {});
@@ -132,7 +132,7 @@ describe("Auth Middleware Tests", () => {
       await isAdmin(mockReq, mockRes, mockNext);
 
       expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
-      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
         error: expect.any(Error),
@@ -155,7 +155,7 @@ describe("Auth Middleware Tests", () => {
       await isAdmin(mockReq, mockRes, mockNext);
 
       expect(consoleSpy).toHaveBeenCalled();
-      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,

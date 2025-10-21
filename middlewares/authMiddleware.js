@@ -35,7 +35,7 @@ export const isAdmin = async (req, res, next) => {
     }
   } catch (error) {
     console.log(error);
-    return res.status(401).send({
+    return res.status(500).send({
       success: false,
       error,
       message: "Error during admin verification",

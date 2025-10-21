@@ -11,6 +11,7 @@ import {
 import { hashPassword } from "../helpers/authHelper.js";
 import mongoose from "mongoose";
 import supertest from "supertest";
+import JWT from "jsonwebtoken";
 
 const resolveApp = async () => {
   const srvMod = await import("../server.js");
@@ -48,8 +49,10 @@ beforeAll(async () => {
   process.env.JWT_SECRET = "testsecretkey";
 
   await connectToTestDb("authController_db_int");
-
   app = await resolveApp();
+
+  jest.spyOn(console, "log").mockImplementation(() => {});
+  jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterAll(async () => {
@@ -78,7 +81,6 @@ describe("RegisterController and Database integration tests", () => {
 
     // verify user saved in DB
     const user = await User.findOne({ email: "example@example.com" });
-
     expect(user).not.toBeNull();
     expect(user.name).toBe("example");
     expect(user.password).not.toBe("strongpass");
@@ -131,6 +133,26 @@ describe("RegisterController and Database integration tests", () => {
 
     expect(res.statusCode).toBe(409);
     expect(res.body.message).toBe("User already registered, please login");
+  });
+
+  test("should fail if there is an unexpected error from the database", async () => {
+    // Mock the User model's findOne method to throw an error
+    jest.spyOn(User, "findOne").mockImplementationOnce(() => {
+      throw new Error("Simulated Database Error");
+    });
+
+    const res = await request(app).post("/api/v1/auth/register").send({
+      name: "New User",
+      email: "exist@example.com",
+      password: "strongpass",
+      phone: "99999999",
+      address: "Another Street",
+      answer: "Basketball",
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch("Error while registering user");
   });
 });
 
@@ -198,10 +220,40 @@ describe("LoginController and Database integration tests", () => {
     expect(res.body.success).toBe(false);
     expect(res.body.message).toBe("Invalid Password");
   });
+
+  test("should fail if there is an unexpected error from the database", async () => {
+    const user = await User.create({
+      name: "Test User",
+      email: "test@example.com",
+      password: await hashPassword("testpass"),
+      phone: "91234567",
+      address: "Test Street",
+      answer: "Football",
+      role: 1,
+    });
+    const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET);
+
+    // Mock the User model's findOne method to throw an error
+    jest.spyOn(User, "findOne").mockImplementationOnce(() => {
+      throw new Error("Simulated Database Error");
+    });
+
+    const res = await request(app)
+      .post("/api/v1/auth/login")
+      .set("Authorization", token)
+      .send({
+        email: "test@example.com",
+        password: "testpass",
+      });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch("Error in login");
+  });
 });
 
 describe("ForgotPasswordController and Database integration tests", () => {
-  test("should reset password successfully with valid email, answer and strong new password", async () => {
+  test("should reset password successfully with valid credentials", async () => {
     const oldHashed = await hashPassword("oldpassword");
     const user = await User.create({
       name: "Forgot User",
@@ -260,7 +312,7 @@ describe("ForgotPasswordController and Database integration tests", () => {
     expect(res.body.message).toBe("Wrong Email Or Answer");
   });
 
-  test("should fail if new password is too short", async () => {
+  test("should fail if new password length < 6", async () => {
     const oldHashed = await hashPassword("oldpass");
     await User.create({
       name: "Short Password User",
@@ -283,10 +335,38 @@ describe("ForgotPasswordController and Database integration tests", () => {
       "Password must be at least 6 characters long"
     );
   });
-});
 
-import JWT from "jsonwebtoken";
-import { describe } from "node:test";
+  test("should fail if there is an unexpected error from the database", async () => {
+    const user = await User.create({
+      name: "Test User",
+      email: "test@example.com",
+      password: await hashPassword("testpass"),
+      phone: "91234567",
+      address: "Test Street",
+      answer: "Football",
+      role: 1,
+    });
+    const token = JWT.sign({ _id: user._id }, process.env.JWT_SECRET);
+
+    // Mock the User model's findOne method to throw an error
+    jest.spyOn(User, "findOne").mockImplementationOnce(() => {
+      throw new Error("Simulated Database Error");
+    });
+
+    const res = await request(app)
+      .post("/api/v1/auth/forgot-password")
+      .set("Authorization", token)
+      .send({
+        email: "test@example.com",
+        answer: "Football",
+        newPassword: "newpass123",
+      });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toMatch("Something went wrong");
+  });
+});
 
 describe("TestController integration test", () => {
   test("should return Protected Routes message", async () => {
@@ -367,7 +447,9 @@ describe("UpdateProfileController and Database integration tests", () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(res.body.message).toBe("Password is required and 6 characters long");
+    expect(res.body.message).toBe(
+      "Password must be at least 6 characters long"
+    );
   });
 
   test("should update password when valid new password is provided", async () => {
