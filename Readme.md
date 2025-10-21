@@ -208,11 +208,14 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 ### 3. Milestone 2 Members’ Contributions  
 
 #### **Helin**
-| Integration test files                                                 | UI Test files |
-|--------------------------------------------------------------------------------------------|---------------------------------|
-|  | |
-| |  |
-|  | |
+| Integration test files | UI Test files |
+|-------------------------|---------------|
+| `client/src/pages/Auth/ForgotPassword-authController.integration.test.js`  | `tests/e2e/forgotpassword-user.spec.ts` |
+| `client/src/pages/Auth/Login-authController.integration.test.js`  | `tests/e2e/login-user.spec.ts` |
+| `client/src/pages/Auth/Register-authController.integration.test.js`  | `tests/e2e/register-user.spec.ts` |
+| `client/src/pages/user/Profile-authController.integration.test.js`  | `tests/e2e/update-user-profile.spec.ts` |
+| `controllers/authController-db.integration.test.js`  <br> • `registerController`  <br> • `loginController`  <br> • `forgotPasswordController`  <br> • `updateProfileController`  <br> • `testController` | |
+
 
 
 ---
