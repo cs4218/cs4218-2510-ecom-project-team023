@@ -245,10 +245,11 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 #### Dinghao
 | Integration test files                                                 | UI Test files  |
 |--------------------------------------------------------------------------------------------|---------------------------------|
-|  | |
-| |  |
-|  | |
-
+| `client/src/components/Form/SearchInput.int.test.js` | `tests/e2e/product-admin.spec.ts` |
+| `client/src/pages/CartPage.int.test.js` |  `tests/e2e/user-admin.spec.js` |
+| `client/src/pages/admin/User.int.test.js` | |
+| `controllers/SearchProductController.int.test.js` | |
+| `controllers/authController-db.integration.test.js (getAllUsersController)`| |
 ---
 
 #### Ryan
