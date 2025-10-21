@@ -796,3 +796,149 @@ describe("Order-related Controllers Integration Tests", () => {
     });
   });
 });
+
+// Integration tests for getAllUsersController
+describe("GET /api/v1/auth/users - GetAllUsersController Integration Tests", () => {
+  let request;
+  let localAdminUser;
+  let localAdminToken;
+  let localUserToken; // New local non-admin token
+
+  beforeAll(async () => {
+    // Assuming 'app' and 'supertest' are available from the global scope
+    request = supertest(app);
+  });
+
+  beforeEach(async () => {
+    const hashedPassword = await hashPassword("password123");
+    
+    // --- CREATE NEW LOCAL ADMIN USER AND TOKEN ---
+    localAdminUser = await User.create({
+      name: "Local Admin User",
+      email: "localadmin@test.com",
+      password: hashedPassword,
+      phone: "1111111000",
+      address: "Local Admin Address",
+      answer: "Local Admin Answer",
+      role: 1, // Admin role
+    });
+
+    localAdminToken = JWT.sign({ _id: localAdminUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    
+    // --- CREATE NEW LOCAL NON-ADMIN USER AND TOKEN ---
+    const localNonAdminUser = await User.create({
+      name: "Local Non-Admin User",
+      email: "localuser@test.com",
+      password: hashedPassword,
+      phone: "2222222000",
+      address: "Local User Address",
+      answer: "Local User Answer",
+      role: 0, // Regular user role
+    });
+    
+    localUserToken = JWT.sign({ _id: localNonAdminUser._id }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+    });
+    // --- END NEW LOCAL USER SETUP ---
+
+
+    // Create 10 additional non-admin users for pagination testing
+    const extraUsers = [];
+    for (let i = 1; i <= 10; i++) {
+      extraUsers.push({
+        name: `Test User ${i}`,
+        email: `testuser${i}@pagination.com`,
+        password: hashedPassword,
+        phone: `11111111${i}`,
+        address: `Address ${i}`,
+        answer: "Test",
+        role: 0,
+      });
+    }
+    await User.insertMany(extraUsers);
+  });
+
+  test("should return paginated user list when authenticated as admin (default page 1, limit 10)", async () => {
+    // Total users: 1 (global admin) + 1 (global regular) + 1 (global second) + 1 (local admin) + 1 (local non-admin) + 10 (extra users) = 15
+    const expectedTotalUsers = 12; 
+
+    const response = await request
+      .get("/api/v1/auth/users")
+      .set("Authorization", localAdminToken); // Use the newly created localAdminToken
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.message).toBe(
+      "Paginated users list fetched successfully"
+    );
+
+    expect(response.body.totalUsers).toBe(expectedTotalUsers); 
+    
+    // Check default pagination settings
+    expect(response.body.limit).toBe(10);
+    expect(response.body.currentPage).toBe(1);
+    expect(response.body.totalPages).toBe(2);
+
+    // Should return the limit number of users on the first page
+    expect(response.body.users.length).toBe(10); 
+    
+    // Check that sensitive fields are excluded
+    expect(response.body.users[0]).not.toHaveProperty("password");
+    expect(response.body.users[0]).not.toHaveProperty("answer");
+  });
+
+  test("should return 401 when not authenticated", async () => {
+    const response = await request.get("/api/v1/auth/users");
+
+    expect(response.status).toBe(401);
+  });
+
+  test("should return 401 when authenticated as regular user (Role 0)", async () => {
+    const response = await request
+      .get("/api/v1/auth/users")
+      .set("Authorization", localUserToken); // Use the newly created localUserToken
+
+    expect(response.status).toBe(401); // Assuming the adminAuth middleware prevents non-admins
+  });
+
+  test("should return the second page with a limit of 5 when custom parameters are provided", async () => {
+    const page = 2;
+    const limit = 5;
+
+    const response = await request
+      .get(`/api/v1/auth/users?page=${page}&limit=${limit}`)
+      .set("Authorization", localAdminToken); // Use the newly created localAdminToken
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.limit).toBe(limit);
+    expect(response.body.currentPage).toBe(page);
+    expect(response.body.totalPages).toBe(3); // 15 total users / 5 limit = 3 pages
+    expect(response.body.users.length).toBe(5); 
+    
+    expect(response.body.users[0]).toHaveProperty("name");
+  });
+
+  test("should return 500 if a database error occurs during count", async () => {
+    // Spy on the User model's countDocuments method and force it to throw an error
+    const countMock = jest
+      .spyOn(User, "countDocuments")
+      .mockImplementationOnce(() => {
+        throw new Error("Simulated Database Error");
+      });
+
+    const response = await request
+      .get("/api/v1/auth/users")
+      .set("Authorization", localAdminToken); // Use the newly created localAdminToken
+
+    expect(response.status).toBe(500);
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe(
+      "Error while getting all users with pagination"
+    );
+
+    countMock.mockRestore();
+  });
+});
