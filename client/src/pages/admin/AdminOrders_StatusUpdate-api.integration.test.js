@@ -187,6 +187,7 @@ describe("AdminOrders.js Status Update Flow Integration Tests", () => {
           { status: "Shipped" }
         );
       });
+      
       axiosPutSpy.mockRestore();
     });
 
@@ -203,6 +204,7 @@ describe("AdminOrders.js Status Update Flow Integration Tests", () => {
         // The component calls getOrders() again on success, triggering a second GET
         expect(axiosGetSpy).toHaveBeenCalledTimes(2);
       });
+
       axiosGetSpy.mockRestore();
     });
 
@@ -235,18 +237,54 @@ describe("AdminOrders.js Status Update Flow Integration Tests", () => {
   });
 
   describe("Failure and Edge Cases", () => {
-    test("should handle status update error gracefully (by showing error toast), and not refresh if PUT request fails", async () => {
-      const originalPut = app.put;
-      app.put = (path, ...handlers) => {
-        // Force the API to fail
-        if (path.startsWith("/api/v1/auth/order-status/")) {
-          return (req, res) =>
-            res.status(500).send({ message: "Update Failed" });
-        }
-        return originalPut.call(app, path, ...handlers);
-      };
+    test("should handle status update (network req) error gracefully (by showing error toast)", async () => {
+      const axiosGetSpy = jest.spyOn(axios, "get");
+      setup();
 
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const statusDropdown = await screen.findByTestId("status-select-0");
+      expect(axiosGetSpy).toHaveBeenCalledTimes(1);
+
+      fireEvent.change(statusDropdown, {
+        target: { value: "CorruptedStatus" },
+      });
+
+      // Fail gracefully while alerting the user; Wait for error toast to be called
+      await waitFor(
+        () => {
+          expect(toast.error).toHaveBeenCalled();
+        },
+        { timeout: 3000 }
+      );
+
+      // Should not refresh if the PUT request fails
+      expect(axiosGetSpy).toHaveBeenCalledTimes(1); // No second GET call
+      expect(statusDropdown).toHaveValue("Not Process"); // UI did not change
+
+      axiosGetSpy.mockRestore();
+    });
+
+    test("should handle status update (network resp) error gracefully (by showing error toast)", async () => {
+      // Original approach. However, Express routes are registered at app initialization and
+      // reassigning app.put doesn't affect already-registered routes.
+
+      // const originalPut = app.put;
+      // app.put = (path, ...handlers) => {
+      //   // Force the API to fail
+      //   if (path.startsWith("/api/v1/auth/order-status/")) {
+      //     return (req, res) =>
+      //       res.status(500).send({ message: "Update Failed" });
+      //   }
+      //   return originalPut.call(app, path, ...handlers);
+      // };
+
+      // New approach: spyOn axios put to mock/ return reject values
+      const axiosPutSpy = jest.spyOn(axios, "put").mockRejectedValueOnce({
+        response: {
+          status: 500,
+          data: { success: false, message: "Error While Updating Order" },
+        },
+      });
+
       const axiosGetSpy = jest.spyOn(axios, "get");
       setup();
 
@@ -255,23 +293,54 @@ describe("AdminOrders.js Status Update Flow Integration Tests", () => {
 
       fireEvent.change(statusDropdown, { target: { value: "Shipped" } });
 
-      // Graceful error handling
+      // Fail gracefully while alerting the user; Wait for error toast to be called
       await waitFor(
         () => {
-          // expect(toast.error).toHaveBeenCalledTimes(1); // unable to detect...
-          // expect(consoleSpy).toHaveBeenCalledTimes(1);
+          expect(toast.error).toHaveBeenCalledWith(
+            "Something went wrong updating order status"
+          );
         },
-        { timeout: 5000 }
+        { timeout: 3000 }
       );
 
-      // should not refresh if the PUT request fails
+      // Should not refresh if the PUT request fails
       expect(axiosGetSpy).toHaveBeenCalledTimes(1); // No second GET call
       expect(statusDropdown).toHaveValue("Not Process"); // UI did not change
 
-      consoleSpy.mockRestore();
+      axiosPutSpy.mockRestore();
       axiosGetSpy.mockRestore();
-      app.put = originalPut;
-    }, 15000);
+    });
+
+    test("should handle status update (database) error gracefully (by showing error toast)", async () => {
+      const axiosGetSpy = jest.spyOn(axios, "get");
+      setup();
+
+      const statusDropdown = await screen.findByTestId("status-select-0");
+      expect(axiosGetSpy).toHaveBeenCalledTimes(1);
+      expect(statusDropdown).toHaveValue("Not Process"); // Initial state is correct
+
+      // Make the database connection fail temporarily
+      const findByIdAndUpdateSpy = jest
+        .spyOn(orderModel, "findByIdAndUpdate")
+        .mockRejectedValueOnce(new Error("Database error"));
+
+      fireEvent.change(statusDropdown, { target: { value: "Shipped" } });
+
+      // Fail gracefully while alerting the user; Wait for error toast to be called
+      await waitFor(
+        () => {
+          expect(toast.error).toHaveBeenCalled();
+        },
+        { timeout: 3000 }
+      );
+
+      // Should not refresh if the PUT request fails
+      expect(axiosGetSpy).toHaveBeenCalledTimes(1); // No second GET call
+      expect(statusDropdown).toHaveValue("Not Process"); // UI did not change
+
+      findByIdAndUpdateSpy.mockRestore();
+      axiosGetSpy.mockRestore();
+    });
 
     test("should not attempt to update status when token is missing", async () => {
       localStorage.clear();
