@@ -65,7 +65,7 @@ const Users = () => {
             <AdminMenu />
           </div>
           <div className="col-md-9">
-            <h1>All Users ({totalUsers})</h1>
+            <h1 data-testid="user_title">All Users ({totalUsers})</h1>
             
             {loading ? (
               <div className="text-center">
@@ -91,19 +91,21 @@ const Users = () => {
                     </thead>
                     <tbody data-testid="user table">
                       {users.map((user, index) => (
-                        <tr key={user._id}>
+                        <tr key={user._id} data-testid={`user_${user._id}`}>
                           <th scope="row">
                             {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                           </th>
-                          <td>{user.name}</td>
-                          <td>{user.email}</td>
-                          <td>{user.phone}</td>
-                          <td>
-                            <span className={`badge ${user.role === 1 ? 'bg-danger' : user.role === 2 ? 'bg-primary' : 'bg-secondary'}`}>
+                          <td data-testid="name">{user.name}</td>
+                          <td data-testid="email">{user.email}</td> {/* email */}
+                          <td data-testid="phone">{user.phone}</td> {/* phone */}
+                          <td data-testid="role">
+                            <span
+                              className={`badge ${user.role === 1 ? 'bg-danger' : user.role === 2 ? 'bg-primary' : 'bg-secondary'}`}
+                            >
                               {user.role === 1 ? 'Admin' : user.role === 2 ? 'Manager' : 'User'}
                             </span>
                           </td>
-                          <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                          <td data-testid="date">{new Date(user.createdAt).toLocaleDateString()}</td> {/* date */}
                         </tr>
                       ))}
                     </tbody>
