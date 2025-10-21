@@ -5,7 +5,9 @@ import "@testing-library/jest-dom/extend-expect";
 import Dashboard from "./Dashboard";
 
 // Stub UserMenu (avoid router concerns)
-jest.mock("../../components/UserMenu", () => () => <div data-testid="user-menu" />);
+jest.mock("../../components/UserMenu", () => () => (
+  <div data-testid="user-menu" />
+));
 
 // Stub Layout so we can assert the title and avoid Header/Footer/Helmet
 jest.mock("../../components/Layout", () => {
@@ -31,7 +33,9 @@ describe("Dashboard (user)", () => {
   });
 
   test("wraps content with Layout and passes the expected title", () => {
-    useAuth.mockReturnValue([{ user: { name: "Nora", email: "n@e.com", phone: "123" } }]);
+    useAuth.mockReturnValue([
+      { user: { name: "Nora", email: "n@e.com", phone: "123" } },
+    ]);
 
     render(<Dashboard />);
 
@@ -55,9 +59,15 @@ describe("Dashboard (user)", () => {
 
     render(<Dashboard />);
 
-    expect(screen.getByRole("heading", { level: 3, name: " User Name : Alice" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: " User Email : alice@example.com" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: " User Phone : 123" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "User Name : Alice" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "User Email : alice@example.com" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "User Contact : 123" })
+    ).toBeInTheDocument();
   });
 
   test("renders three headings even when user is missing (graceful empty state)", () => {
