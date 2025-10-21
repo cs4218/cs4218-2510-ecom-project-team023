@@ -5,7 +5,6 @@ const { test, expect } = require('@playwright/test');
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000';
 
 /* ---------------------------- Helper functions ---------------------------- */
-
 // Login as Admin user
 async function loginUser(page, user) {
   await page.goto(`${BASE_URL}/login`);
@@ -317,7 +316,7 @@ let updateProductData;
 
 test.describe('Update Product Admin User', () => {
   test.beforeEach(async ({ page }) => {
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
     await loginAdmin(page);
     const { uniqueName, productData } = await createProductHelper(page)
     await goToProductDashboard(page);
