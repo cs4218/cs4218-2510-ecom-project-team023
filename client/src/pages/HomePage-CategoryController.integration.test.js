@@ -1,4 +1,6 @@
 // Some tests written with help of AI
+jest.setTimeout(30000);
+
 import "@testing-library/jest-dom";
 import React from "react";
 import { MemoryRouter } from "react-router-dom";

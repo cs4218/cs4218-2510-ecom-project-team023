@@ -304,7 +304,43 @@ test.describe("E2E - Order Creation and Payment Flows", () => {
     });
   });
 
-  // Order creation AND payment
+  test("FLOW: Checkout journey (from Homepage) - Homepage → Add to Cart → Checkout", async ({
+    page,
+  }) => {
+    // Find product cards on the homepage
+    const productCard = page.locator(
+      ".card, .product-card, article, li, .product-item"
+    );
+    await expect(productCard.first()).toBeVisible({ timeout: 10_000 });
+
+    // Add the first available product to the cart
+    const firstCard = productCard.filter({ hasText: PRODUCT_NAME_RX }).first();
+    const addToCartBtn = firstCard.getByRole("button", {
+      name: /add to cart/i,
+    });
+    await expect(addToCartBtn).toBeVisible();
+    await addToCartBtn.click();
+
+    // Verify toast message appears
+    await expect(page.locator("text=Item Added to cart")).toBeVisible();
+
+    // Navigate to the cart
+    await navigateToCart(page);
+
+    // Verify product is in the cart
+    await expect(page.locator("text=/laptop/i").first()).toBeVisible();
+
+    // Verify cart summary is displayed
+    await expect(page.locator("text=Cart Summary").first()).toBeVisible();
+    await expect(page.locator("text=Total").first()).toBeVisible();
+
+    // Verify checkout requires login
+    await expect(
+      page.locator("text=/please login to checkout/i").first()
+    ).toBeVisible();
+  });
+
+  // Order creation AND payment "attempt"
 
   test("FLOW: Complete purchase journey (Single Item) - Login → Search → Add Single Item to Cart → Checkout → Payment → View Order", async ({
     page,
@@ -466,7 +502,7 @@ test.describe("E2E - Order Creation and Payment Flows", () => {
       .locator("button")
       .filter({ hasText: /remove/i })
       .first();
-    await removeButton.click()
+    await removeButton.click();
 
     // Verify that the payment button is no longer enabled
     await expect(paymentButton).not.toBeVisible();

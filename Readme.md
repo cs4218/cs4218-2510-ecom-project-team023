@@ -155,7 +155,7 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 
 ---
 
-### 2. Members’ Contributions  
+### 2. Milestone 1 Members’ Contributions  
 
 #### **Helin**
 | Feature                 | Client Related Files (`/client/src/`)                                                 | Server Related Files (`./`) |
@@ -202,5 +202,56 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 |----------|----------------------------------------|------------------------------|
 | **Admin Orders** |- `pages/admin/AdminOrders.js` | |
 | **Orders** |- `pages/user/Orders.js` | - `controllers/authController.js` <br> 1. `updateProfileController`<br> 2. `getOrdersController`<br> 3. `getAllOrdersController`<br> 4. `orderStatusController`<br> <br> - `models/orderModel.js` |
+
+---
+
+### 3. Milestone 2 Members’ Contributions  
+
+#### **Helin**
+| Integration test files                                                 | UI Test files |
+|--------------------------------------------------------------------------------------------|---------------------------------|
+|  | |
+| |  |
+|  | |
+
+
+---
+
+#### Dominic
+| **Integration Test Files**                                                  | **UI Test Files**                          |
+| --------------------------------------------------------------------------- | ------------------------------------------ |
+| `client/src/pages/CartPage-ProductController-checkout.integration.test.js`  | `client/tests/e2e/product-details.spec.ts` |
+| `client/src/pages/Product-listing-crud-nonAdmin.integration.test.js`        |                                            |
+| `client/src/pages/Product-photo-category-crud-nonAdmin.integration.test.js` |                                            |
+| `client/src/pages/Products-crud-nonAdmin.integration.test.js`               |                                            |
+| `client/src/pages/CartPage-fe-be-braintree.integration.test.js`             |                                            |
+| `client/src/pages/checkout-integration.test.js`                             |                                            |
+
+---
+
+#### Mounil
+| Integration test files                                                 | UI Test files  |
+|--------------------------------------------------------------------------------------------|---------------------------------|
+|  | |
+| |  |
+|  | |
+
+---
+
+#### Dinghao
+| Integration test files                                                 | UI Test files  |
+|--------------------------------------------------------------------------------------------|---------------------------------|
+|  | |
+| |  |
+|  | |
+
+---
+
+#### Ryan
+| Integration test files                                                 | UI Test files |
+|--------------------------------------------------------------------------------------------|---------------------------------|
+|  | |
+| |  |
+|  | |
 
 ---

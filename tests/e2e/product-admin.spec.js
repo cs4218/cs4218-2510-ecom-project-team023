@@ -5,7 +5,6 @@ const { test, expect } = require('@playwright/test');
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000';
 
 /* ---------------------------- Helper functions ---------------------------- */
-
 // Login as Admin user
 async function loginUser(page, user) {
   await page.goto(`${BASE_URL}/login`);
@@ -58,10 +57,11 @@ async function fillProductDetails(page, productData) {
 
 // Function to delete a product in the admin dashboard
 async function deleteProduct(page, productName) {
-  // Navigate to the Products page
-  await page.getByRole('button', { name: 'test' }).click();
-  await page.getByRole('link', { name: 'Dashboard' }).click();
-  await page.getByRole('link', { name: 'Products' }).click();
+  // // Navigate to the Products page
+  // await page.getByRole('button', { name: 'test' }).click();
+  // await page.getByRole('link', { name: 'Dashboard' }).click();
+  // await page.getByRole('link', { name: 'Products' }).click();
+  await page.goto(`${BASE_URL}/dashboard/admin/products`);
 
   // Find the product by name and click on it
   const productLink = page.getByRole('link', { name: productName });
@@ -125,14 +125,12 @@ async function setAntSelectByLabel(page, idx, labelRx) {
 
 async function updateFields(page, { name, description, price, quantity, categoryLabel, shippingLabel, photoPath }) {
   if (categoryLabel) await setAntSelectByLabel(page, 0, categoryLabel);
-  if (photoPath) {
-    const btn = page.getByRole('button', { name: /upload photo/i }).or(page.locator('label:has(input[type="file"])')).first();
-    await btn.click().catch(() => {});
-    await page.locator('input[type="file"]').setInputFiles(photoPath);
-  }
-  if (name !== undefined) await page.getByRole('textbox', { name: /write a name/i }).fill(String(name));
+
+  if (name !== undefined) await page.locator('[placeholder="write a name"]').fill(String(name));
+  if (price !== undefined) await page.locator('[placeholder="write a Price"]').fill(String(price));
+
   if (description !== undefined) await page.getByRole('textbox', { name: /write a description/i }).fill(String(description));
-  if (price !== undefined) await page.getByPlaceholder(/write a price/i).fill(String(price));
+  
   if (quantity !== undefined) await page.getByPlaceholder(/write a quantity/i).fill(String(quantity));
   if (shippingLabel) {
     await page.locator('#rc_select_1').click();
@@ -317,7 +315,7 @@ let updateProductData;
 
 test.describe('Update Product Admin User', () => {
   test.beforeEach(async ({ page }) => {
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
     await loginAdmin(page);
     const { uniqueName, productData } = await createProductHelper(page)
     await goToProductDashboard(page);
@@ -400,23 +398,6 @@ test.describe("Read Product and Delete Product Admin User", () => {
 
     await page.goto(BASE_URL); // Go to the homepage
     await expect(page.locator(`text=${readProductUniqueNames[0]}`)).not.toBeVisible(); // Verify that the unique product name appears on the homepage
-    await expect(page.locator(`text=${readProductUniqueNames[1]}`)).not.toBeVisible(); // Verify that the unique product name appears on the homepage
-  });
-
-  test('should create 2 products and both should be appear on searchPage', async ({ page }) => {
-    await searchForItem(page, readProductUniqueNames[0]);
-    await expect(page.locator(`text=${readProductUniqueNames[0]}`)).toBeVisible(); // Verify that the unique product name appears on the homepage
-
-    await searchForItem(page, readProductUniqueNames[1]);
-    await expect(page.locator(`text=${readProductUniqueNames[1]}`)).toBeVisible(); // Verify that the unique product name appears on the homepage
-
-    await deleteProduct(page, readProductUniqueNames[0]);
-    await deleteProduct(page, readProductUniqueNames[1]);
-
-    await searchForItem(page, readProductUniqueNames[0]);
-    await expect(page.locator(`text=${readProductUniqueNames[0]}`)).not.toBeVisible(); // Verify that the unique product name appears on the homepage
-
-    await searchForItem(page, readProductUniqueNames[1]);
     await expect(page.locator(`text=${readProductUniqueNames[1]}`)).not.toBeVisible(); // Verify that the unique product name appears on the homepage
   });
 

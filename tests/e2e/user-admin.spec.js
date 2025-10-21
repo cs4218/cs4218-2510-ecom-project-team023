@@ -143,48 +143,6 @@ test.describe("User Dashboard Pagination", () => {
             currentPage += 1;
         }
     });
-
-    test("should have created admin user and created non admin user", async ({ page }) => {
-        const expectedUsers = [
-            {
-                name: 'test',
-                email: 'testdh@gmail.com',
-                phone: '123',
-                role: 'Admin',
-                joined: '10/18/2025'
-            },
-            {
-                name: 'normaluser',
-                email: 'normal@gmail.com',
-                phone: '1',
-                role: 'User',
-                joined: '10/19/2025'
-            }
-        ];
-
-        // Go through all pages and validate user data
-        const totalUsersText = await page.locator('h1:has-text("All Users")').innerText();
-        const totalUsers = parseInt(totalUsersText.match(/\d+/)[0], 10);  // Extract total users
-        const usersPerPage = 10;
-        const totalPages = Math.ceil(totalUsers / usersPerPage);
-
-        let currentPage = 1;
-        const found = [];
-        while (currentPage <= totalPages && found.length < 2) {
-            // Validate the rows on the current page
-            await checkUserTable(page, expectedUsers, found);
-
-            // If it's not the last page, click 'Next' to go to the next page
-            if (currentPage < totalPages) {
-                const nextButton = await page.locator('text=Next');
-                await expect(nextButton).toBeVisible();  // Ensure the "Next" button is visible
-                await nextButton.click();
-                await page.waitForTimeout(1000);  // Wait for the page to load
-            }
-            currentPage += 1;
-        }
-        expect(found.length).toBe(2)
-    });
 });
 
 

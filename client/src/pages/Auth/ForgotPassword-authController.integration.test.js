@@ -41,7 +41,7 @@ describe("Forgot Password page integration tests with backend authController", (
 
   beforeEach(async () => {
     await resetTestDb();
-    server = app.listen(7460);
+    server = app.listen(0);
     port = server.address().port;
     axios.defaults.baseURL = `http://localhost:${port}`;
     axiosPostSpy = jest.spyOn(axios, "post");
@@ -81,9 +81,12 @@ describe("Forgot Password page integration tests with backend authController", (
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
       target: { value: "reset@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter Your Favourite Sports"), {
-      target: { value: "Football" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Enter Your Favourite Sports"),
+      {
+        target: { value: "Football" },
+      }
+    );
     fireEvent.change(screen.getByPlaceholderText("Enter New Password"), {
       target: { value: "newstrongpass" },
     });
@@ -96,7 +99,7 @@ describe("Forgot Password page integration tests with backend authController", (
         expect.any(Object)
       )
     );
-    expect(screen.getByText("Login Page")).toBeInTheDocument();
+    expect(await screen.findByText("Login Page")).toBeInTheDocument();
     expect(axiosPostSpy).toHaveBeenCalledTimes(1);
     expect(axiosPostSpy).toHaveBeenCalledWith(
       "/api/v1/auth/forgot-password",
@@ -130,9 +133,12 @@ describe("Forgot Password page integration tests with backend authController", (
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
       target: { value: "wronganswer@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter Your Favourite Sports"), {
-      target: { value: "Football" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Enter Your Favourite Sports"),
+      {
+        target: { value: "Football" },
+      }
+    );
     fireEvent.change(screen.getByPlaceholderText("Enter New Password"), {
       target: { value: "newpass123" },
     });
@@ -151,9 +157,12 @@ describe("Forgot Password page integration tests with backend authController", (
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
       target: { value: "ghost@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter Your Favourite Sports"), {
-      target: { value: "Football" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Enter Your Favourite Sports"),
+      {
+        target: { value: "Football" },
+      }
+    );
     fireEvent.change(screen.getByPlaceholderText("Enter New Password"), {
       target: { value: "newpass123" },
     });
@@ -183,9 +192,12 @@ describe("Forgot Password page integration tests with backend authController", (
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
       target: { value: "short@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter Your Favourite Sports"), {
-      target: { value: "Tennis" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Enter Your Favourite Sports"),
+      {
+        target: { value: "Tennis" },
+      }
+    );
     fireEvent.change(screen.getByPlaceholderText("Enter New Password"), {
       target: { value: "123" },
     });
@@ -213,9 +225,12 @@ describe("Forgot Password page integration tests with backend authController", (
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
       target: { value: "reset@example.com" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter Your Favourite Sports"), {
-      target: { value: "Football" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Enter Your Favourite Sports"),
+      {
+        target: { value: "Football" },
+      }
+    );
     fireEvent.change(screen.getByPlaceholderText("Enter New Password"), {
       target: { value: "newstrongpass" },
     });
@@ -234,9 +249,12 @@ describe("Forgot Password page integration tests with backend authController", (
     fireEvent.change(screen.getByPlaceholderText("Enter Your Email"), {
       target: { value: "" },
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter Your Favourite Sports"), {
-      target: { value: "" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText("Enter Your Favourite Sports"),
+      {
+        target: { value: "" },
+      }
+    );
     fireEvent.change(screen.getByPlaceholderText("Enter New Password"), {
       target: { value: "" },
     });
@@ -246,7 +264,7 @@ describe("Forgot Password page integration tests with backend authController", (
     const email = screen.getByPlaceholderText("Enter Your Email");
     const answer = screen.getByPlaceholderText("Enter Your Favourite Sports");
     const password = screen.getByPlaceholderText("Enter New Password");
-    expect(email.validity.valid).toBe(false); // HTML5 required attribute prevents submission   
+    expect(email.validity.valid).toBe(false); // HTML5 required attribute prevents submission
     expect(answer.validity.valid).toBe(false);
     expect(password.validity.valid).toBe(false);
     // ensure we are still on the forgot password page
