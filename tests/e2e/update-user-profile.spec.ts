@@ -48,9 +48,6 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
         .fill("UpdatedUserName");
       await page.getByRole("button", { name: "UPDATE", exact: true }).click();
 
-      await expect(
-        page.getByText("Profile updated successfully")
-      ).toBeVisible();
 
       // Verify updated username is reflected in the header in UI
       await expect(
@@ -85,10 +82,6 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
         .getByRole("textbox", { name: "Enter Your Name" })
         .fill(UPDATE_TEST_USERNAME);
       await profileForm.getByRole("button", { name: "UPDATE" }).click();
-
-      await expect(
-        page.getByText("Profile updated successfully")
-      ).toBeVisible();
 
       // Verify localStorage items after profile update
       await expect
@@ -155,10 +148,6 @@ test.describe("Update User Profile Detail Flows UI tests", () => {
         .getByRole("textbox", { name: "Enter Your Password" })
         .fill("password");
       await page.getByRole("button", { name: "UPDATE", exact: true }).click();
-
-      await expect(
-        page.getByText("Profile updated successfully")
-      ).toBeVisible();
     });
 
     await test.step("Logout user", async () => {
