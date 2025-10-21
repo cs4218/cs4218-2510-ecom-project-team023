@@ -10,12 +10,12 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "sonarqube": "sonar-scanner",
     "test": "npm run test:frontend && npm run test:backend",
-    "test:all": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.config.js",
-    "test:backend": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js",
-    "test:frontend": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js",
-    "test:e2e": "cross-env NODE_ENV=test playwright test",
-    "test:e2e:ui": "cross-env NODE_ENV=test playwright test --ui",
-    "test:e2e:headed": "NODE_ENV=test playwright test -c playwright.config.ts --headed",
+    "test:all": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.config.js",
+    "test:frontend": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
+    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js",
+    "test:e2e": "cross-env playwright test",
+    "test:e2e:ui": "cross-env playwright test --ui",
+    "test:e2e:headed": "cross-env playwright test -c playwright.config.ts --headed",
     "coverage": "npm run coverage:backend && npm run coverage:frontend",
     "coverage:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js --coverage",
     "coverage:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js --coverage"
@@ -34,8 +34,6 @@
     "express": "^4.21.2",
     "express-formidable": "^1.2.0",
     "jsonwebtoken": "^9.0.2",
-    "mongo": "^0.1.0",
-    "mongodb": "^6.19.0",
     "mongoose": "^8.1.2",
     "morgan": "^1.10.0",
     "nodemon": "^3.0.3",
@@ -63,5 +61,9 @@
     "sonarqube-scanner": "^3.3.0",
     "supertest": "^7.1.4",
     "typescript-eslint": "^8.41.0"
+  },
+  "overrides": {
+    "mongodb": "6.15.0",
+    "bson": "6.10.3"
   }
 }

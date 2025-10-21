@@ -209,7 +209,7 @@ export const updateProfileController = async (req, res) => {
     if (password && password.length < 6) {
       return res.status(400).send({
         success: false,
-        message: "Password is required and 6 characters long",
+        message: "Password must be at least 6 characters long",
       });
     }
     const hashedPassword = password ? await hashPassword(password) : undefined;
@@ -230,7 +230,7 @@ export const updateProfileController = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    return res.status(400).send({
+    return res.status(500).send({
       success: false,
       message: "Error while updating profile",
       error,
@@ -247,7 +247,7 @@ export const getOrdersController = async (req, res) => {
       .populate("buyer", "name");
     return res.json({
       success: true,
-      orders
+      orders,
     });
   } catch (error) {
     console.log(error);
@@ -268,7 +268,7 @@ export const getAllOrdersController = async (req, res) => {
       .sort({ createdAt: -1 });
     return res.json({
       success: true,
-      orders
+      orders,
     });
   } catch (error) {
     console.log(error);
@@ -285,16 +285,22 @@ export const orderStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
-    
+
     // Validate status against allowed values
-    const validStatuses = ["Not Process", "Processing", "Shipped", "Delivered", "Cancel"];
+    const validStatuses = [
+      "Not Process",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Cancel",
+    ];
     if (!validStatuses.includes(status)) {
       return res.status(400).send({
         success: false,
         message: "Invalid status value",
       });
     }
-    
+
     const orders = await orderModel.findByIdAndUpdate(
       orderId,
       { status },
@@ -302,7 +308,7 @@ export const orderStatusController = async (req, res) => {
     );
     return res.json({
       success: true,
-      orders
+      orders,
     });
   } catch (error) {
     console.log(error);
