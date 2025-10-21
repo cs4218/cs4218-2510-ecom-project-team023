@@ -48,7 +48,7 @@ describe("Profile page integration tests with backend authController", () => {
 
   beforeEach(async () => {
     await resetTestDb();
-    server = app.listen(7461);
+    server = app.listen(0);
     port = server.address().port;
     axios.defaults.baseURL = `http://localhost:${port}`;
     axiosPutSpy = jest.spyOn(axios, "put");
