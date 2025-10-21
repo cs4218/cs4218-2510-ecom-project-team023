@@ -41,7 +41,7 @@ describe("Forgot Password page integration tests with backend authController", (
 
   beforeEach(async () => {
     await resetTestDb();
-    server = app.listen(7460);
+    server = app.listen(7467);
     port = server.address().port;
     axios.defaults.baseURL = `http://localhost:${port}`;
     axiosPostSpy = jest.spyOn(axios, "post");
