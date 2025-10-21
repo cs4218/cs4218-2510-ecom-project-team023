@@ -8,7 +8,7 @@ import {
   getOrdersController,
   getAllOrdersController,
   orderStatusController,
-  getAllUsersController
+  getAllUsersController,
 } from "./authController.js";
 import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
@@ -539,7 +539,7 @@ describe("Auth Controller Unit Tests", () => {
         expect(mockRes.status).toHaveBeenCalledWith(400);
         expect(mockRes.send).toHaveBeenCalledWith({
           success: false,
-          message: "Password is required and 6 characters long",
+          message: "Password must be at least 6 characters long",
         });
         expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
         expect(hashPassword).not.toHaveBeenCalled();
@@ -611,7 +611,7 @@ describe("Auth Controller Unit Tests", () => {
       await updateProfileController(mockReq, mockRes);
 
       expect(consoleSpy).toHaveBeenCalledWith(error);
-      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
         message: "Error while updating profile",
@@ -645,7 +645,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(secondPopulateMock).toHaveBeenCalledWith("buyer", "name");
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        orders: mockOrders
+        orders: mockOrders,
       });
     });
 
@@ -694,7 +694,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        orders: mockOrders
+        orders: mockOrders,
       });
     });
   });
@@ -717,7 +717,7 @@ describe("Auth Controller Unit Tests", () => {
       );
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        orders: updatedOrder
+        orders: updatedOrder,
       });
     });
 
@@ -761,7 +761,7 @@ describe("Auth Controller Unit Tests", () => {
       );
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        orders: null
+        orders: null,
       });
     });
 
@@ -842,7 +842,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "1";
     req.query.limit = "5";
 
-    const mockUsers = Array.from({ length: 5 }, (_, i) => ({ _id: `u${i+1}` }));
+    const mockUsers = Array.from({ length: 5 }, (_, i) => ({
+      _id: `u${i + 1}`,
+    }));
 
     userModel.countDocuments.mockResolvedValue(12);
     userModel.find.mockReturnValue({
@@ -864,7 +866,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "3";
     req.query.limit = "5";
 
-    const mockUsers = Array.from({ length: 2 }, (_, i) => ({ _id: `u${i+11}` })); // last 2 users
+    const mockUsers = Array.from({ length: 2 }, (_, i) => ({
+      _id: `u${i + 11}`,
+    })); // last 2 users
 
     userModel.countDocuments.mockResolvedValue(12);
     userModel.find.mockReturnValue({
@@ -877,7 +881,11 @@ describe("getAllUsersController Unit Tests", () => {
     await getAllUsersController(req, res);
 
     expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ currentPage: 3, totalPages: 3, users: mockUsers })
+      expect.objectContaining({
+        currentPage: 3,
+        totalPages: 3,
+        users: mockUsers,
+      })
     );
   });
 
@@ -886,7 +894,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "2";
     req.query.limit = "4";
 
-    const mockUsers = Array.from({ length: 4 }, (_, i) => ({ _id: `u${i+5}` }));
+    const mockUsers = Array.from({ length: 4 }, (_, i) => ({
+      _id: `u${i + 5}`,
+    }));
 
     userModel.countDocuments.mockResolvedValue(10);
     userModel.find.mockReturnValue({
@@ -899,7 +909,12 @@ describe("getAllUsersController Unit Tests", () => {
     await getAllUsersController(req, res);
 
     expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ currentPage: 2, totalPages: 3, users: mockUsers, limit: 4 })
+      expect.objectContaining({
+        currentPage: 2,
+        totalPages: 3,
+        users: mockUsers,
+        limit: 4,
+      })
     );
   });
 
@@ -908,7 +923,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "invalid";
     req.query.limit = "invalid";
 
-    const mockUsers = Array.from({ length: 10 }, (_, i) => ({ _id: `user${i+1}` }));
+    const mockUsers = Array.from({ length: 10 }, (_, i) => ({
+      _id: `user${i + 1}`,
+    }));
 
     userModel.countDocuments.mockResolvedValue(20);
     userModel.find.mockReturnValue({
