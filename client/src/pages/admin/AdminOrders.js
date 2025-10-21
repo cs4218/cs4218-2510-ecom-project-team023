@@ -40,6 +40,9 @@ const AdminOrders = () => {
       if (response.data.success) {
         toast.success("Order status updated successfully");
         getOrders();
+      } else {
+        toast.error("Something went wrong updating order status");
+        console.log("Something went wrong updating order status");
       }
     } catch (error) {
       console.log(error);

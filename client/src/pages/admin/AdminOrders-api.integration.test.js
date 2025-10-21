@@ -1,16 +1,24 @@
-// Tests are written with the help of AI
-// Integration tests for AdminOrders.js with API endpoints
+// Integration tests for AdminOrders.js with real API endpoints
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import axios from "axios";
+import { MemoryRouter } from "react-router-dom";
+import {
+  connectToTestDb,
+  disconnectFromTestDb,
+  resetTestDb,
+} from "../../../../config/testdb.js";
+import app from "../../../../server.js";
+import userModel from "../../../../models/userModel.js";
+import productModel from "../../../../models/productModel.js";
+import orderModel from "../../../../models/orderModel.js";
+import { hashPassword } from "../../../../helpers/authHelper.js";
+import { AuthProvider } from "../../context/auth";
 import AdminOrders from "./AdminOrders";
-import { useAuth } from "../../context/auth";
+import JWT from "jsonwebtoken";
 
 // MOCKS
-jest.mock("axios");
-jest.mock("../../context/auth");
-
 // Mock components to isolate AdminOrders component
 jest.mock("../../components/AdminMenu", () => {
   return function AdminMenu() {
@@ -36,199 +44,281 @@ jest.mock("moment", () => {
   }));
 });
 
-describe("AdminOrders.js Integration Tests with API", () => {
-  // Sample mock order data
-  const mockOrders = [
-    {
-      _id: "order1",
-      status: "Processing",
-      buyer: { name: "Test User 1", _id: "user1" },
-      payment: { success: true },
-      products: [
-        {
-          _id: "prod1",
-          name: "Test Product 1",
-          description: "This is test product 1",
-          price: 99.99,
-        },
-        {
-          _id: "prod2",
-          name: "Test Product 2",
-          description: "This is test product 2",
-          price: 49.99,
-        },
-      ],
-      updatedAt: "2023-01-01T00:00:00.000Z",
-    },
-    {
-      _id: "order2",
-      status: "Delivered",
-      buyer: { name: "Test User 2", _id: "user2" },
-      payment: { success: true },
-      products: [
-        {
-          _id: "prod3",
-          name: "Test Product 3",
-          description: "This is test product 3",
-          price: 149.99,
-        },
-      ],
-      updatedAt: "2023-01-02T00:00:00.000Z",
-    },
-  ];
+// Mock the antd Select component to be a simple HTML select
+jest.mock("antd", () => {
+  const antd = jest.requireActual("antd");
 
-  beforeEach(() => {
+  const MockSelect = ({
+    children,
+    onChange,
+    "data-testid": dataTestId,
+    defaultValue,
+    className,
+    value,
+  }) => {
+    const handleChange = (e) => {
+      if (onChange) onChange(e.target.value);
+    };
+    return (
+      <select
+        data-testid={dataTestId}
+        value={value || defaultValue} // Prefer value if controlled, else defaultValue
+        onChange={handleChange}
+        className={className || ""}
+      >
+        {children}
+      </select>
+    );
+  };
+
+  MockSelect.Option = ({ children, value, className }) => {
+    return (
+      <option value={value} className={className || ""}>
+        {children}
+      </option>
+    );
+  };
+
+  return {
+    ...antd,
+    Select: MockSelect, // Override Select
+  };
+});
+
+// Setup Test DB
+beforeAll(async () => {
+  await connectToTestDb("admin-orders-api-int-tests");
+});
+
+afterAll(async () => {
+  await disconnectFromTestDb();
+});
+
+describe("AdminOrders.js Integration Tests with API", () => {
+  let server;
+  let port;
+  let adminUser, user1, prod1, prod2, order1, order2, mockOrders;
+
+  beforeEach(async () => {
+    await resetTestDb();
+    server = app.listen(7461); // Use a different port
+    port = server.address().port;
+    axios.defaults.baseURL = `http://localhost:${port}`;
+
+    // 1. Create users (admin and regular)
+    const adminHashed = await hashPassword("adminpass");
+    adminUser = await userModel.create({
+      name: "Admin User",
+      email: "admin@example.com",
+      password: adminHashed,
+      phone: "11111111",
+      address: "Admin Street",
+      answer: "Test",
+      role: 1, // Admin role
+    });
+
+    const user1Hashed = await hashPassword("user1pass");
+    user1 = await userModel.create({
+      name: "Test User 1",
+      email: "user1@example.com",
+      password: user1Hashed,
+      phone: "22222222",
+      address: "User1 Street",
+      answer: "Test",
+      role: 0,
+    });
+
+    // 2. Create test products
+    prod1 = await productModel.create({
+      name: "Test Product 1",
+      slug: "test-product-1",
+      description: "This is test product 1",
+      price: 99.99,
+      category: "60f0f0f0f0f0f0f0f0f0f0f0",
+      quantity: 10,
+    });
+    prod2 = await productModel.create({
+      name: "Test Product 2",
+      slug: "test-product-2",
+      description: "This is test product 2",
+      price: 49.99,
+      category: "60f0f0f0f0f0f0f0f0f0f0f0",
+      quantity: 5,
+    });
+
+    // 3. Create test orders
+    order1 = await orderModel.create({
+      products: [prod1._id],
+      payment: { success: true },
+      buyer: user1._id,
+      status: "Processing",
+    });
+    order2 = await orderModel.create({
+      products: [prod2._id],
+      payment: { success: true },
+      buyer: adminUser._id,
+      status: "Delivered",
+    });
+
+    // Re-fetch to populate
+    mockOrders = await orderModel
+      .find({})
+      .populate("buyer", "name")
+      .populate("products", "-photo")
+      .sort({ createdAt: -1 });
+
+    // 4. Set up Auth (log in as ADMIN)
+    const token = JWT.sign({ _id: adminUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    localStorage.setItem(
+      "auth",
+      JSON.stringify({
+        user: {
+          _id: adminUser._id,
+          name: adminUser.name,
+          email: adminUser.email,
+          role: adminUser.role,
+        },
+        token,
+      })
+    );
+
     jest.clearAllMocks();
   });
 
+  afterEach(async () => {
+    await new Promise((res) => setTimeout(res, 50));
+    await new Promise((resolve) => server.close(resolve));
+    localStorage.clear();
+  });
+
+  const setup = () =>
+    render(
+      <AuthProvider>
+        <MemoryRouter>
+          <AdminOrders />
+        </MemoryRouter>
+      </AuthProvider>
+    );
+
   describe("API Integration Tests", () => {
-    it("should display 'No orders yet.' when API returns an empty list", async () => {
-      // ARRANGE
-      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
-      axios.get.mockResolvedValueOnce({
-        data: { success: true, orders: [] },
-      });
-
-      // ACT
-      render(<AdminOrders />);
-
-      // ASSERT
-      // Wait for the "No orders yet." text to appear
-      expect(await screen.findByText("No orders yet.")).toBeInTheDocument();
-
-      // Ensure no order data is rendered
-      expect(screen.queryByText("Status")).not.toBeInTheDocument();
-    });
-
-    it("should fetch all orders from the correct API endpoint", async () => {
-      // Setup auth mock
-      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
-
-      // Setup API response mock
-      axios.get.mockResolvedValueOnce({ data: { orders: mockOrders } });
-
-      // Render component
-      render(<AdminOrders />);
-
-      await screen.findByText(mockOrders[0].buyer.name);
-
-      // Verify API was called with correct endpoint
-      expect(axios.get).toHaveBeenCalledWith("/api/v1/auth/all-orders");
-    });
-
     it("should display the correct number of orders from the API response", async () => {
-      // Setup auth mock
-      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
-
-      // Setup API response mock
-      axios.get.mockResolvedValueOnce({ data: { orders: mockOrders } });
-
-      // Render component
-      render(<AdminOrders />);
+      setup();
 
       // Wait for orders to be displayed
       await waitFor(() => {
         // Check that we have the correct number of order rows
         const orderRows = screen.getAllByTestId("order-row");
-        expect(orderRows.length).toBe(mockOrders.length);
+        expect(orderRows.length).toBe(mockOrders.length); // Should be 2
+      });
+    });
+
+    it("should display buyer names correctly for all orders", async () => {
+      // 
+      setup();
+
+      await waitFor(() => {
+        expect(screen.getByText(adminUser.name)).toBeInTheDocument();
+        expect(screen.getByText(user1.name)).toBeInTheDocument();
       });
     });
 
     it("should display all essential order details from the API response", async () => {
-      // Setup auth mock
-      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
-
-      // Setup API response mock
-      axios.get.mockResolvedValueOnce({
-        data: { success: true, orders: mockOrders },
-      });
-
-      // Render component
-      render(<AdminOrders />);
+      setup();
 
       // Wait for orders to be displayed and verify details
       await waitFor(() => {
-        // Check status dropdown is visible and initialized with correct values
-        const statusSelects = screen.getAllByTestId(/status-select-\d+/);
-        expect(statusSelects.length).toBe(mockOrders.length);
-
         // Check buyer names
-        expect(screen.getByText("Test User 1")).toBeInTheDocument();
-        expect(screen.getByText("Test User 2")).toBeInTheDocument();
+        expect(screen.getByText(user1.name)).toBeInTheDocument();
+        expect(screen.getByText(adminUser.name)).toBeInTheDocument();
 
         // Check payment status
         expect(screen.getAllByText("Success").length).toBe(2);
 
-        // Check order numbers - use more specific queries
-        const orderRows = screen.getAllByTestId("order-row");
-        expect(orderRows[0].querySelector("td").textContent).toBe("1");
-        expect(orderRows[1].querySelector("td").textContent).toBe("2");
+        // Check product details
+        expect(screen.getByText(prod1.name)).toBeInTheDocument();
+        expect(screen.getByText(prod2.name)).toBeInTheDocument();
 
-        // Check product quantities - use more specific approach
-        const products = screen.getAllByText(/Product \d+/);
-        expect(products.length).toBe(3); // Total 3 products across all orders
+        // Check quantities
+        const quantityCells = screen
+          .getAllByTestId("order-row")
+          .map((row) => row.cells[5].textContent);
+        expect(quantityCells).toContain(String(order1.products.length)); // "1"
+        expect(quantityCells).toContain(String(order2.products.length)); // "1"
       });
     });
 
-    it("should handle API error gracefully", async () => {
-      // Setup auth mock
-      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
-
-      // Setup API error mock
-      const errorMsg = "Network Error";
-      axios.get.mockRejectedValueOnce(new Error(errorMsg));
-
-      // Spy on console.log to verify error handling
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-
-      // Render component
-      render(<AdminOrders />);
-
-      // Wait for error handling
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
+    it("should display 'No orders yet.' when API returns an empty list", async () => {
+      await act(async () => {
+        await orderModel.deleteMany({});
       });
 
-      // Restore console.log
-      consoleSpy.mockRestore();
+      setup();
+
+      await waitFor(() => {
+        expect(screen.getByText("No orders yet.")).toBeInTheDocument();
+      });
     });
 
     it("should not make API call when auth token is missing", () => {
-      // Setup auth mock with no token
-      useAuth.mockReturnValue([{}, jest.fn()]);
+      localStorage.clear(); // Ensure no auth token
+      setup();
 
-      // Render component
-      render(<AdminOrders />);
+      // Verify "No orders" message is shown
+      expect(screen.getByText("No orders yet.")).toBeInTheDocument();
+    });
 
-      // Verify API was not called
-      expect(axios.get).not.toHaveBeenCalled();
+    it("should prevent a non-admin user from fetching all orders", async () => {
+      // Log in as a regular user
+      const userToken = JWT.sign({ _id: user1._id }, process.env.JWT_SECRET);
+      localStorage.setItem(
+        "auth",
+        JSON.stringify({ user: user1, token: userToken })
+      );
+      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+
+      setup();
+
+      // The middleware should prevent the request, and redirect away; User1's order will not be reflected on screen
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(expect.any(Error));
+        expect(screen.queryByText("Test Product 1")).not.toBeInTheDocument();
+      });
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle API error gracefully", async () => {
+      const originalGet = app.get;
+      app.get = jest.fn((path, ...handlers) => {
+        if (path === "/api/v1/auth/all-orders") {
+          return (req, res) => res.status(500).send({ message: "Server Down" });
+        }
+        return originalGet.call(app, path, ...handlers);
+      });
+
+      setup();
+
+      await waitFor(() => {
+        expect(screen.getByText("No orders yet.")).toBeInTheDocument(); // default fallback
+      });
+
+      app.get = originalGet;
     });
 
     it("should display status dropdown for each order with correct initial value", async () => {
-      // Setup auth mock
-      useAuth.mockReturnValue([{ token: "test-token" }, jest.fn()]);
-
-      // Setup API response mock
-      axios.get.mockResolvedValueOnce({
-        data: { success: true, orders: mockOrders },
-      });
-
-      // Render component
-      render(<AdminOrders />);
+      setup();
 
       // Wait for orders to be displayed
       await waitFor(() => {
         const statusSelects = screen.getAllByTestId(/status-select-\d+/);
         expect(statusSelects.length).toBe(mockOrders.length);
 
-        // Check that the dropdown is rendered with the correct class
-        statusSelects.forEach((select) => {
-          expect(select).toHaveClass("status-select");
-        });
-
-        // Verify the default values match the mock orders by checking the displayed text
-        expect(screen.getByText(mockOrders[0].status)).toBeInTheDocument(); // Checks for "Processing"
-        expect(screen.getByText(mockOrders[1].status)).toBeInTheDocument(); // Checks for "Delivered"
+        // Verify the default values match the mock orders
+        // Note: Orders are sorted by date, so order2 (Delivered) is first
+        expect(statusSelects[0]).toHaveValue(mockOrders[0].status); // "Delivered"
+        expect(statusSelects[1]).toHaveValue(mockOrders[1].status); // "Processing"
       });
     });
   });

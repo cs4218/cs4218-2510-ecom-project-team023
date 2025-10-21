@@ -173,7 +173,9 @@ test.describe("E2E - Order Creation and Payment Flows", () => {
   });
 
   // Order Creation
-  test("FLOW: Checkout journey (No account) - Search → Add Single Item to Cart → Checkout (Require login)", async ({ page }) => {
+  test("FLOW: Checkout journey (No account) - Search → Add Single Item to Cart → Checkout (Require login)", async ({
+    page,
+  }) => {
     // Search for a product
     await searchFor(page, "Laptop");
 
@@ -429,5 +431,44 @@ test.describe("E2E - Order Creation and Payment Flows", () => {
     await expect(
       page.locator("text=/status|processing|completed|pending/i").first()
     ).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("FLOW: Dropped purchase journey (Single Item) - Login → Search → Add Single Item to Cart → Checkout → Remove Item (Empty case)", async ({
+    page,
+  }) => {
+    // Login first
+    await loginUser(page, NON_ADMIN_EMAIL, NON_ADMIN_PW);
+
+    // Add product to cart
+    await searchFor(page, "Laptop");
+    await openPdpFromResults(page, PRODUCT_NAME_RX);
+    await addToCartViaUi(page);
+
+    // Go to cart and proceed to checkout
+    await navigateToCart(page);
+
+    // Verify payment button is available
+    const paymentButton = page
+      .locator("button")
+      .filter({ hasText: /make payment|pay now|checkout/i })
+      .first();
+    await expect(paymentButton).toBeVisible({ timeout: 10_000 });
+
+    // For this test, we'll verify the payment button is enabled and then navigate directly to orders
+    // This simulates a successful payment without dealing with the actual payment processing
+    // which may not work in the test environment
+
+    // Verify payment button is enabled when all conditions are met
+    await expect(paymentButton).toBeEnabled({ timeout: 30_000 });
+
+    // Remove item in cart
+    const removeButton = page
+      .locator("button")
+      .filter({ hasText: /remove/i })
+      .first();
+    await removeButton.click()
+
+    // Verify that the payment button is no longer enabled
+    await expect(paymentButton).not.toBeVisible();
   });
 });
