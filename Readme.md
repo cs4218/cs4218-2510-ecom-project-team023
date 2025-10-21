@@ -230,11 +230,15 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 ---
 
 #### Mounil
-| Integration test files                                                 | UI Test files  |
-|--------------------------------------------------------------------------------------------|---------------------------------|
-|  | |
-| |  |
-|  | |
+| **Integration test files**                                                  | **UI Test files**                          |
+|---------------------------------------------------------------------------- |------------------------------------------- |
+|  `client/src/pages/admin/AdminDashboard-AdminMenu.integration.test.js`      | `tests/e2e/AdminCategory.spec.ts`          |
+| `client/src/pages/admin/CreateCategory-CategoryController.integration.test.js`|  `tests/e2e/HomePage.spec.ts`            |
+|  `client/src/pages/admin/CreateProduct-ProductController.integration.test.js` |                                          |
+|  `client/src/pages/admin/UpdateProduct-ProductController.integration.test.js` |                                          |
+|  `client/src/pages/HomePage-CategoryController.integration.test.js`           |                                          |
+|  `client/src/pages/HomePage-ProductController.integration.test.js`            |                                          |
+|  `controllers/CategoryController-db.integration.test.js`                       |                                          |
 
 ---
 
