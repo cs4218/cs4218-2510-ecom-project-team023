@@ -120,12 +120,14 @@ describe("AdminOrders.js Status Update Flow Integration Tests", () => {
       payment: { success: true },
       buyer: user1._id,
       status: "Processing",
+      createdAt: "2025-10-14T17:57:19.963+00:00"
     });
     order2 = await orderModel.create({
       products: [prod1._id],
       payment: { success: true },
       buyer: user1._id,
       status: "Not Process",
+      createdAt: "2025-10-15T17:57:19.963+00:00"
     });
 
     const token = JWT.sign({ _id: adminUser._id }, process.env.JWT_SECRET);
