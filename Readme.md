@@ -254,8 +254,10 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 #### Ryan
 | Integration test files                                                 | UI Test files |
 |--------------------------------------------------------------------------------------------|---------------------------------|
-|  | |
-| |  |
-|  | |
+| `controllers/authController-db.integration.test.js` (order-related controllers) | `tests/e2e/order-creation-payment.spec.ts` |
+| `controllers/authController-orderModel.integration.test.js` (preserved as shallow integration test) | `tests/e2e/order-management.spec.ts` |
+| `client/src/pages/admin/AdminOrders-api.integration.test.js` | `tests/e2e/payment-process.spec.ts` |
+| `client/src/pages/admin/AdminOrders_StatusUpdate-api.integration.test.js` ||
+| `client/src/pages/user/Orders-api.integration.test` ||
 
 ---
