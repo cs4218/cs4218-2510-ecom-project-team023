@@ -215,6 +215,8 @@ Our Continuous Integration (CI) pipeline ensures that every commit and pull requ
 | `client/src/pages/Auth/Register-authController.integration.test.js`  | `tests/e2e/register-user.spec.ts` |
 | `client/src/pages/user/Profile-authController.integration.test.js`  | `tests/e2e/update-user-profile.spec.ts` |
 | `controllers/authController-db.integration.test.js`  <br> • `registerController`  <br> • `loginController`  <br> • `forgotPasswordController`  <br> • `updateProfileController`  <br> • `testController` | |
+| `middlewares/authMiddleware-db.integration.test.js` | |
+
 
 
 
