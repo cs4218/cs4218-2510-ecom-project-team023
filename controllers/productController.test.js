@@ -1,6 +1,7 @@
 /* list of jest tests written by chatgpt getProductController, getPhotoController, productFiltersController, Braintree tests*/
 const fs = require("fs");
 const slugify = require("slugify");
+const mongoose = require('mongoose');
 
 // ---------- Mocks ----------
 jest.mock("fs", () => ({
@@ -126,15 +127,46 @@ const makeQueryChain = (result) => {
   return chain;
 };
 
+// NEW: wait until controller calls res.json or res.send (async gateway callback)
+async function waitForResponse(res, { timeoutMs = 1500 } = {}) {
+  const start = Date.now();
+  const called = () =>
+    (res.json.mock.calls.length + res.send.mock.calls.length) > 0;
+  while (!called()) {
+    if (Date.now() - start > timeoutMs) break;
+    await new Promise((r) => setTimeout(r, 0));
+  }
+}
+
 beforeEach(() => {
+  // Reset all mock call counts between tests (singleton gateway, models, etc.)
   jest.clearAllMocks();
-  // reset ProductModel default instance behavior each test
-  ProductModel.mockImplementation((doc = {}) => ({
-    ...doc,
-    photo: {},
-    save: jest.fn().mockResolvedValue({ _id: "prod1", ...doc }),
-  }));
+
+  // Model helpers used by robust path
+  ProductModel.bulkWrite = jest.fn();
+  OrderModel.create = jest.fn().mockResolvedValue([{ _id: 'orderX' }]);
+
+  // Default: transaction-capable session
+  mongoose.startSession = jest.fn().mockResolvedValue({
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    abortTransaction: jest.fn(),
+    endSession: jest.fn(),
+  });
+
+  // Default gateway sale: success (can be overridden in individual tests)
+  const gateway = getGateway();
+  gateway.transaction.sale.mockImplementation((payload, cb) =>
+    cb(null, { success: true, transaction: { status: 'submitted_for_settlement', id: 'txn_ok' } })
+  );
 });
+
+// Helper to mock DB-backed product lookup used by robust path
+function mockDBProducts(docs) {
+  ProductModel.find.mockReturnValue({
+    select: () => Promise.resolve(docs),
+  });
+}
 
 // Valid ObjectIds for tests that should pass ObjectId validation
 const OID1 = "507f1f77bcf86cd799439011";
@@ -1006,5 +1038,170 @@ describe("REGRESSION lock-ins", () => {
     const responder = pickResponder(res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(responder).toHaveBeenCalledWith({ error: "Name is Required" });
+  });
+});
+
+describe('brainTreePaymentController (robust path) — validation & totals', () => {
+  test('404 when any product id in cart does not exist', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 10, quantity: 5 }]); // p2 missing
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 10, qty: 1 }, { _id: 'p2', price: 20, qty: 1 }] }, user: { _id: 'u' } },
+      res
+    );
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(pickResponder(res)).toHaveBeenCalledWith(expect.objectContaining({ ok: false, message: expect.stringMatching(/Unknown product/i) }));
+    expect(getGateway().transaction.sale).not.toHaveBeenCalled();
+  });
+
+  test('422 when client total does not match DB total', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 100, quantity: 5 }]); // client says 90
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 90, qty: 1 }] }, user: { _id: 'u' } },
+      res
+    );
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(pickResponder(res)).toHaveBeenCalledWith(expect.objectContaining({ ok: false, message: expect.stringMatching(/Totals do not align/i) }));
+    expect(getGateway().transaction.sale).not.toHaveBeenCalled();
+  });
+
+  test('400 when quantity is invalid (<= 0)', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 10, quantity: 5 }]);
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 10, qty: 0 }] }, user: { _id: 'u' } },
+      res
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(pickResponder(res)).toHaveBeenCalledWith(expect.objectContaining({ ok: false, message: expect.stringMatching(/Invalid quantity/i) }));
+    expect(getGateway().transaction.sale).not.toHaveBeenCalled();
+  });
+
+  test('409 when stock is insufficient', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 10, quantity: 1 }]);
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 10, qty: 2 }] }, user: { _id: 'u' } },
+      res
+    );
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(pickResponder(res)).toHaveBeenCalledWith(expect.objectContaining({ ok: false, message: expect.stringMatching(/Insufficient stock/i) }));
+    expect(getGateway().transaction.sale).not.toHaveBeenCalled();
+  });
+});
+
+/* ---------- Gateway outcomes ---------- */
+describe('brainTreePaymentController (robust path) — gateway outcomes', () => {
+  test('500 when gateway.sale returns error', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 10, quantity: 5 }]);
+    getGateway().transaction.sale.mockImplementation((payload, cb) => cb(new Error('gateway down'), null));
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 10, qty: 1 }] }, user: { _id: 'u' } },
+      res
+    );
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(pickResponder(res)).toHaveBeenCalledWith(expect.objectContaining({ ok: false, message: expect.stringMatching(/Payment error/i) }));
+  });
+
+  test('402 when result.success is false (rejected)', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 10, quantity: 5 }]);
+    getGateway().transaction.sale.mockImplementation((payload, cb) => cb(null, { success: false }));
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 10, qty: 1 }] }, user: { _id: 'u' } },
+      res
+    );
+    expect(res.status).toHaveBeenCalledWith(402);
+    expect(pickResponder(res)).toHaveBeenCalledWith(expect.objectContaining({ ok: false, message: expect.stringMatching(/rejected/i) }));
+  });
+});
+
+/* ---------- Stock update + order creation (transaction & fallback) ---------- */
+describe('brainTreePaymentController (robust path) — stock & order application', () => {
+  test('409 when bulkWrite does not modify all items (concurrent stock change)', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 10, quantity: 5 }]);
+    ProductModel.bulkWrite.mockResolvedValue({ modifiedCount: 0 }); // not all modified
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 10, qty: 1 }] }, user: { _id: 'u' } },
+      res
+    );
+    expect(ProductModel.bulkWrite).toHaveBeenCalled();
+    await waitForResponse(res);
+    const body4 = (res.json.mock.calls.length ? res.json : res.send).mock.calls.at(-1)[0];
+    expect(body4.ok).toBe(false);
+    expect(String(body4.message)).toMatch(/stock changed/i);
+    expect(OrderModel.create).not.toHaveBeenCalled();
+  });
+
+  test('200 on full success (transactional path)', async () => {
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 25, quantity: 10 }]);
+    ProductModel.bulkWrite.mockResolvedValue({ modifiedCount: 1 });
+    OrderModel.create.mockResolvedValue([{ _id: 'orderABC' }]);
+
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 25, qty: 2 }] }, user: { _id: 'user1' } },
+      res
+    );
+
+    expect(getGateway().transaction.sale).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 50 }),
+      expect.any(Function)
+    );
+    expect(ProductModel.bulkWrite).toHaveBeenCalled();
+
+    await waitForResponse(res);
+    const body5 = (res.json.mock.calls.length ? res.json : res.send).mock.calls.at(-1)[0];
+    expect(body5).toMatchObject({ ok: true, amount: 50 });
+  });
+
+  test('falls back to non-transactional path when session.startTransaction throws, still succeeds (200)', async () => {
+    mongoose.startSession.mockResolvedValue({
+      startTransaction: jest.fn(() => { throw new Error('no-tx'); }),
+      endSession: jest.fn(),
+    });
+
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 30, quantity: 5 }]);
+    ProductModel.bulkWrite.mockResolvedValue({ modifiedCount: 1 });
+    OrderModel.create.mockResolvedValue([{ _id: 'orderFALL' }]);
+
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 30, qty: 1 }] }, user: { _id: 'u' } },
+      res
+    );
+
+    expect(ProductModel.bulkWrite).toHaveBeenCalled();
+    await waitForResponse(res);
+    const body6 = (res.json.mock.calls.length ? res.json : res.send).mock.calls.at(-1)[0];
+    expect(body6).toMatchObject({ ok: true, amount: 30 });
+    expect(getGateway().transaction.sale).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 30 }),
+      expect.any(Function)
+    );
+  });
+
+  test('500 "Checkout failed" when fallback path throws', async () => {
+    mongoose.startSession.mockResolvedValue({
+      startTransaction: jest.fn(() => { throw new Error('no-tx'); }),
+      endSession: jest.fn(),
+    });
+    mockDBProducts([{ _id: 'p1', name: 'A', price: 10, quantity: 5 }]);
+    ProductModel.bulkWrite.mockResolvedValue({ modifiedCount: 1 });
+    OrderModel.create.mockRejectedValue(new Error('create failed'));
+
+    const res = makeRes();
+    await brainTreePaymentController(
+      { body: { nonce: 'n', cart: [{ _id: 'p1', price: 10, qty: 1 }] }, user: { _id: 'u' } },
+      res
+    );
+
+    await waitForResponse(res);
+    const body7 = (res.json.mock.calls.length ? res.json : res.send).mock.calls.at(-1)[0];
+    expect(body7.ok).toBe(false);
+    expect(String(body7.message)).toMatch(/checkout failed/i);
   });
 });

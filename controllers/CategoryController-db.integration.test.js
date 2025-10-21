@@ -1,33 +1,32 @@
-/**
- * @jest-environment node
- */
+// Some tests written with help of AI
 jest.setTimeout(30000);
 
 import request from "supertest";
-import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
-// Make the app use the in-memory Mongo
-jest.mock(require.resolve("../config/db.js"), () => ({
-  __esModule: true,
-  default: async () => {
-    const m = (await import("mongoose")).default;
-    await m.connect(process.env.MONGO_URL, { dbName: "ecom_category_int" });
-  },
-}));
+// real app + shared in-memory DB helpers 
+import {
+  connectToTestDb,
+  resetTestDb,
+  disconnectFromTestDb,
+} from "../config/testdb.js";
 
-let app, mongod;
-let User, Category;
-let hashPassword;
+// models (use real models bound to the active connection)
+import User from "../models/userModel.js";
+import Category from "../models/categoryModel.js";
+import { hashPassword } from "../helpers/authHelper.js";
 
+// --- helpers ---
 const adminEmail = "admin@test.local";
 const adminPwd   = "Admin#123";
 
-// --- helpers ---
 const withToken = (req, token) =>
-  req.set("Authorization", token).set("authorization", token).set("Cookie", [`token=${token}`]);
+  req
+    .set("Authorization", token)
+    .set("authorization", token)
+    .set("Cookie", [`token=${token}`]);
 
-const loginAndGetToken = async (email, password) => {
+const loginAndGetToken = async (app, email, password) => {
   const res = await request(app)
     .post("/api/v1/auth/login")
     .send({ email, password })
@@ -68,55 +67,22 @@ const resolveApp = async () => {
   throw new Error("Could not resolve Express app/http.Server from server.js");
 };
 
+let app;
+
 beforeAll(async () => {
   process.env.NODE_ENV = "test";
   process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
-  mongod = await MongoMemoryServer.create();
-  process.env.MONGO_URL = mongod.getUri();
-
-  // wipe precompiled models that might exist across Jest projects
-  if (typeof mongoose.deleteModel === "function") {
-    for (const name of ["User", "users", "Category", "categories"]) {
-      try { mongoose.deleteModel(name); } catch {}
-    }
-  } else {
-    delete mongoose.models.User;
-    delete mongoose.models.users;
-    delete mongoose.models.Category;
-    delete mongoose.models.categories;
-  }
-
-  // register real models
-  await import("../models/userModel.js");
-  await import("../models/categoryModel.js");
-
-  // boot app
+  await connectToTestDb("ecom_category_int");
   app = await resolveApp();
-
-  // get models
-  User = mongoose.models.User || mongoose.models.users
-    ? (mongoose.models.User ? mongoose.model("User") : mongoose.model("users"))
-    : undefined;
-  Category = mongoose.model("Category");
-
-  if (!User || !Category) {
-    throw new Error(`Models missing. Available: ${Object.keys(mongoose.models).join(", ")}`);
-  }
-
-  // optional helper for hashing
-  const helpers = await import("../helpers/authHelper.js").catch(() => ({}));
-  hashPassword = helpers.hashPassword || (async (x) => x);
 });
 
 afterAll(async () => {
-  if (mongoose.connection.readyState) await mongoose.disconnect();
-  if (mongod) await mongod.stop();
+  await disconnectFromTestDb();
 });
 
 afterEach(async () => {
-  const { collections } = mongoose.connection;
-  await Promise.all(Object.values(collections).map((c) => c.deleteMany({})));
+  await resetTestDb();
 });
 
 describe("Category Routes/Controllers (Integration)", () => {
@@ -134,7 +100,7 @@ describe("Category Routes/Controllers (Integration)", () => {
       answer: "x",
       role: 1, // admin
     });
-    adminToken = await loginAndGetToken(adminEmail, adminPwd);
+    adminToken = await loginAndGetToken(app, adminEmail, adminPwd);
   });
 
   const listFrom = (body) =>
@@ -224,7 +190,7 @@ describe("Category Routes/Controllers (Integration)", () => {
     const updatedName = upd.body?.category?.name ?? upd.body?.name;
     const updatedSlug = upd.body?.category?.slug ?? upd.body?.slug;
 
-    // ======= Only change: don't over-specify case for display name; slug is authoritative
+    // slug is authoritative; name case can vary
     expect(updatedName.toLowerCase()).toBe("smart tvs");
     expect(updatedSlug).toBe("smart-tvs");
 

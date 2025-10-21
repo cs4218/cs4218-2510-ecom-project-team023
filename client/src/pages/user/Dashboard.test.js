@@ -5,7 +5,9 @@ import "@testing-library/jest-dom/extend-expect";
 import Dashboard from "./Dashboard";
 
 // Stub UserMenu (avoid router concerns)
-jest.mock("../../components/UserMenu", () => () => <div data-testid="user-menu" />);
+jest.mock("../../components/UserMenu", () => () => (
+  <div data-testid="user-menu" />
+));
 
 // Stub Layout so we can assert the title and avoid Header/Footer/Helmet
 jest.mock("../../components/Layout", () => {
@@ -31,7 +33,9 @@ describe("Dashboard (user)", () => {
   });
 
   test("wraps content with Layout and passes the expected title", () => {
-    useAuth.mockReturnValue([{ user: { name: "Nora", email: "n@e.com", address: "SG" } }]);
+    useAuth.mockReturnValue([
+      { user: { name: "Nora", email: "n@e.com", phone: "123" } },
+    ]);
 
     render(<Dashboard />);
 
@@ -48,16 +52,22 @@ describe("Dashboard (user)", () => {
     expect(screen.getByTestId("user-menu")).toBeInTheDocument();
   });
 
-  test("shows user details (name, email, address) from auth", () => {
+  test("shows user details (name, email, phone) from auth", () => {
     useAuth.mockReturnValue([
-      { user: { name: "Alice", email: "alice@example.com", address: "10 Main St" } },
+      { user: { name: "Alice", email: "alice@example.com", phone: "123" } },
     ]);
 
     render(<Dashboard />);
 
-    expect(screen.getByRole("heading", { level: 3, name: "Alice" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "alice@example.com" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: "10 Main St" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "User Name : Alice" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "User Email : alice@example.com" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "User Contact : 123" })
+    ).toBeInTheDocument();
   });
 
   test("renders three headings even when user is missing (graceful empty state)", () => {

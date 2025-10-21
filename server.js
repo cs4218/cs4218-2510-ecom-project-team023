@@ -10,7 +10,10 @@ import productRoutes from "./routes/productRoutes.js";
 import cors from "cors";
 
 dotenv.config();
-connectDB();
+
+if (process.env.NODE_ENV !== "test") {
+  connectDB();
+}
 
 const app = express();
 

@@ -8,7 +8,7 @@ import {
   getOrdersController,
   getAllOrdersController,
   orderStatusController,
-  getAllUsersController
+  getAllUsersController,
 } from "./authController.js";
 import userModel from "../models/userModel.js";
 import orderModel from "../models/orderModel.js";
@@ -539,7 +539,7 @@ describe("Auth Controller Unit Tests", () => {
         expect(mockRes.status).toHaveBeenCalledWith(400);
         expect(mockRes.send).toHaveBeenCalledWith({
           success: false,
-          message: "Password is required and 6 characters long",
+          message: "Password must be at least 6 characters long",
         });
         expect(userModel.findByIdAndUpdate).not.toHaveBeenCalled();
         expect(hashPassword).not.toHaveBeenCalled();
@@ -611,7 +611,7 @@ describe("Auth Controller Unit Tests", () => {
       await updateProfileController(mockReq, mockRes);
 
       expect(consoleSpy).toHaveBeenCalledWith(error);
-      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
         message: "Error while updating profile",
@@ -643,7 +643,10 @@ describe("Auth Controller Unit Tests", () => {
       expect(orderModel.find).toHaveBeenCalledWith({ buyer: "userId123" });
       expect(firstPopulateMock).toHaveBeenCalledWith("products", "-photo");
       expect(secondPopulateMock).toHaveBeenCalledWith("buyer", "name");
-      expect(mockRes.json).toHaveBeenCalledWith(mockOrders);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: mockOrders,
+      });
     });
 
     it("should handle errors and return 500 status", async () => {
@@ -663,7 +666,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "Error WHile Geting Orders",
+          message: "Error While Getting Orders",
         })
       );
       expect(consoleSpy).toHaveBeenCalledWith(error);
@@ -689,7 +692,10 @@ describe("Auth Controller Unit Tests", () => {
       expect(mockQuery.populate).toHaveBeenCalledWith("products", "-photo");
       expect(mockQuery.populate).toHaveBeenCalledWith("buyer", "name");
       expect(mockQuery.sort).toHaveBeenCalledWith({ createdAt: -1 });
-      expect(mockRes.json).toHaveBeenCalledWith(mockOrders);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: mockOrders,
+      });
     });
   });
 
@@ -709,38 +715,31 @@ describe("Auth Controller Unit Tests", () => {
         { status: "Shipped" },
         { new: true }
       );
-      expect(mockRes.json).toHaveBeenCalledWith(updatedOrder);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: updatedOrder,
+      });
     });
 
     // Equivalence Partitioning: Invalid Status
-    it("should return 500 and an error message when an invalid status is provided (DB validation failure)", async () => {
+    it("should return 400 and an error message when an invalid status is provided", async () => {
       // Arrange
       const invalidStatus = "InvalidStatus";
       mockReq.params = { orderId: "orderId123" };
       mockReq.body = { status: invalidStatus };
 
-      const validationError = new Error(
-        "Mongoose validation failed: Status is not an allowed enum value."
-      );
-
-      orderModel.findByIdAndUpdate.mockRejectedValue(validationError);
-
       // Act
       await orderStatusController(mockReq, mockRes);
 
       // Assert
-      expect(orderModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        "orderId123",
-        { status: invalidStatus },
-        { new: true }
-      );
+      // The controller should validate the status and return 400 before calling findByIdAndUpdate
+      expect(orderModel.findByIdAndUpdate).not.toHaveBeenCalled();
 
-      // Check that the controller caught the error and sent the correct response
-      expect(mockRes.status).toHaveBeenCalledWith(500);
+      // Check that the controller sent the correct response
+      expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.send).toHaveBeenCalledWith({
         success: false,
-        message: "Error While Updateing Order",
-        error: validationError, // Check that the error object was included in the response
+        message: "Invalid status value",
       });
 
       // Crucially, the success path (res.json) should NOT have been called
@@ -760,7 +759,10 @@ describe("Auth Controller Unit Tests", () => {
         { status: "Shipped" },
         { new: true }
       );
-      expect(mockRes.json).toHaveBeenCalledWith(null);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        orders: null,
+      });
     });
 
     // Control-Flow Path: Error handling
@@ -779,7 +781,7 @@ describe("Auth Controller Unit Tests", () => {
       expect(mockRes.send).toHaveBeenCalledWith(
         expect.objectContaining({
           success: false,
-          message: "Error While Updateing Order",
+          message: "Error While Updating Order",
         })
       );
       expect(consoleSpy).toHaveBeenCalledWith(error);
@@ -840,7 +842,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "1";
     req.query.limit = "5";
 
-    const mockUsers = Array.from({ length: 5 }, (_, i) => ({ _id: `u${i+1}` }));
+    const mockUsers = Array.from({ length: 5 }, (_, i) => ({
+      _id: `u${i + 1}`,
+    }));
 
     userModel.countDocuments.mockResolvedValue(12);
     userModel.find.mockReturnValue({
@@ -862,7 +866,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "3";
     req.query.limit = "5";
 
-    const mockUsers = Array.from({ length: 2 }, (_, i) => ({ _id: `u${i+11}` })); // last 2 users
+    const mockUsers = Array.from({ length: 2 }, (_, i) => ({
+      _id: `u${i + 11}`,
+    })); // last 2 users
 
     userModel.countDocuments.mockResolvedValue(12);
     userModel.find.mockReturnValue({
@@ -875,7 +881,11 @@ describe("getAllUsersController Unit Tests", () => {
     await getAllUsersController(req, res);
 
     expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ currentPage: 3, totalPages: 3, users: mockUsers })
+      expect.objectContaining({
+        currentPage: 3,
+        totalPages: 3,
+        users: mockUsers,
+      })
     );
   });
 
@@ -884,7 +894,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "2";
     req.query.limit = "4";
 
-    const mockUsers = Array.from({ length: 4 }, (_, i) => ({ _id: `u${i+5}` }));
+    const mockUsers = Array.from({ length: 4 }, (_, i) => ({
+      _id: `u${i + 5}`,
+    }));
 
     userModel.countDocuments.mockResolvedValue(10);
     userModel.find.mockReturnValue({
@@ -897,7 +909,12 @@ describe("getAllUsersController Unit Tests", () => {
     await getAllUsersController(req, res);
 
     expect(res.send).toHaveBeenCalledWith(
-      expect.objectContaining({ currentPage: 2, totalPages: 3, users: mockUsers, limit: 4 })
+      expect.objectContaining({
+        currentPage: 2,
+        totalPages: 3,
+        users: mockUsers,
+        limit: 4,
+      })
     );
   });
 
@@ -906,7 +923,9 @@ describe("getAllUsersController Unit Tests", () => {
     req.query.page = "invalid";
     req.query.limit = "invalid";
 
-    const mockUsers = Array.from({ length: 10 }, (_, i) => ({ _id: `user${i+1}` }));
+    const mockUsers = Array.from({ length: 10 }, (_, i) => ({
+      _id: `user${i + 1}`,
+    }));
 
     userModel.countDocuments.mockResolvedValue(20);
     userModel.find.mockReturnValue({

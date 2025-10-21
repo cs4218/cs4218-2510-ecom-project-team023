@@ -11,11 +11,11 @@
     "sonarqube": "sonar-scanner",
     "test": "npm run test:frontend && npm run test:backend",
     "test:all": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.config.js",
-    "test:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js",
-    "test:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js",
-    "test:e2e": "NODE_ENV=test playwright test",
-    "test:e2e:ui": "NODE_ENV=test playwright test --ui",
-    "test:e2e:headed": "NODE_ENV=test playwright test -c playwright.config.ts --headed",
+    "test:frontend": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.frontend.config.js",
+    "test:backend": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.backend.config.js",
+    "test:e2e": "cross-env playwright test",
+    "test:e2e:ui": "cross-env playwright test --ui",
+    "test:e2e:headed": "cross-env playwright test -c playwright.config.ts --headed",
     "coverage": "npm run coverage:backend && npm run coverage:frontend",
     "coverage:backend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.backend.config.js --coverage",
     "coverage:frontend": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest -c jest.frontend.config.js --coverage"
@@ -24,6 +24,7 @@
   "author": "RP",
   "license": "ISC",
   "dependencies": {
+    "ah": "^1.6.0",
     "bcrypt": "^5.1.1",
     "braintree": "^3.22.0",
     "colors": "^1.4.0",
@@ -31,11 +32,9 @@
     "cors": "^2.8.5",
     "date-fns": "^3.3.1",
     "dotenv": "^16.4.1",
-    "express": "^4.18.2",
+    "express": "^4.21.2",
     "express-formidable": "^1.2.0",
     "jsonwebtoken": "^9.0.2",
-    "mongo": "^0.1.0",
-    "mongodb": "^6.19.0",
     "mongoose": "^8.1.2",
     "morgan": "^1.10.0",
     "nodemon": "^3.0.3",
@@ -52,6 +51,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.12.12",
     "babel-jest": "^29.7.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.34.0",
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.3.0",
@@ -62,5 +62,9 @@
     "sonarqube-scanner": "^3.3.0",
     "supertest": "^7.1.4",
     "typescript-eslint": "^8.41.0"
+  },
+  "overrides": {
+    "mongodb": "6.15.0",
+    "bson": "6.10.3"
   }
 }

@@ -10,11 +10,11 @@ const { Option } = Select;
 
 const AdminOrders = () => {
   const [status, setStatus] = useState([
-    "Not processed",
+    "Not Process",
     "Processing",
     "Shipped",
     "Delivered",
-    "Canceled",
+    "Cancel",
   ]);
   const [changeStatus, setChangeStatus] = useState("");
   const [orders, setOrders] = useState([]);
@@ -22,7 +22,7 @@ const AdminOrders = () => {
   const getOrders = async () => {
     try {
       const { data } = await axios.get("/api/v1/auth/all-orders");
-      setOrders(data);
+      setOrders(data.orders);
     } catch (error) {
       console.log(error);
     }
@@ -34,12 +34,19 @@ const AdminOrders = () => {
 
   const handleChange = async (orderId, value) => {
     try {
-      const { data } = await axios.put(`/api/v1/auth/order-status/${orderId}`, {
+      const response = await axios.put(`/api/v1/auth/order-status/${orderId}`, {
         status: value,
       });
-      getOrders();
+      if (response.data.success) {
+        toast.success("Order status updated successfully");
+        getOrders();
+      } else {
+        toast.error("Something went wrong updating order status");
+        console.log("Something went wrong updating order status");
+      }
     } catch (error) {
       console.log(error);
+      toast.error("Something went wrong updating order status");
     }
   };
   return (
@@ -70,16 +77,26 @@ const AdminOrders = () => {
                     )
                     .map((o, i) => (
                       <React.Fragment key={o._id}>
-                        <tr className="order-summary-row">
+                        <tr
+                          className="order-summary-row"
+                          data-testid="order-row"
+                        >
                           <td>{i + 1}</td>
                           <td>
                             <Select
                               variant="borderless"
                               onChange={(value) => handleChange(o._id, value)}
                               defaultValue={o?.status}
+                              // value={o?.status}
+                              data-testid={`status-select-${i}`}
+                              className="status-select"
                             >
                               {status.map((s, i) => (
-                                <Option key={i} value={s}>
+                                <Option
+                                  key={i}
+                                  value={s}
+                                  className="status-option"
+                                >
                                   {s}
                                 </Option>
                               ))}

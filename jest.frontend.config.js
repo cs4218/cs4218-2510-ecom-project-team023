@@ -3,14 +3,18 @@ export default {
   displayName: "frontend",
   testEnvironment: "jest-environment-jsdom",
 
-  transform: { "^.+\\.[jt]sx?$": "babel-jest" },
+  transform: {
+    "^.+\\.jsx?$": "babel-jest",
+  },
+  transformIgnorePatterns: ["/node_modules/(?!(styleMock\\.js)$)"],
   moduleNameMapper: { "\\.(css|less|scss|sass)$": "identity-obj-proxy" },
 
-  // ✅ Only look for tests in your React app, not generated site
+  // Only look for tests in your React app, not generated site
   testMatch: ["<rootDir>/client/src/**/*.test.[jt]s?(x)"],
   setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
+  "setupFiles": ["<rootDir>/jest.polyfills.js"],
 
-  // ✅ Only instrument real app source; exclude tests & generated/built folders
+  // Only instrument real app source; exclude tests & generated/built folders
   collectCoverage: true,
   collectCoverageFrom: [
     "client/src/**/*.{js,jsx,ts,tsx}",
@@ -22,9 +26,7 @@ export default {
     "!client/src/index.*",
     "!client/src/main.*",
     "!client/src/reportWebVitals.*",
-
-    // 🚫 EXCLUDE the generated MarkBind site output
-    "!client/src/_site/**"
+    "!client/src/_site/**",
   ],
 
   // Don’t traverse these for tests
@@ -37,11 +39,11 @@ export default {
     "<rootDir>/client/.next/",
     "<rootDir>/client/.markbind/",
     "<rootDir>/client/docs/",
-    "<rootDir>/client/src/_site/",   // ⬅️ important
+    "<rootDir>/client/src/_site/",  
     "<rootDir>/docs/",
     "<rootDir>/public/",
     "<rootDir>/build/",
-    "<rootDir>/dist/"
+    "<rootDir>/dist/",
   ],
 
   // Don’t include these in coverage denominator either
@@ -54,13 +56,13 @@ export default {
     "<rootDir>/client/.next/",
     "<rootDir>/client/.markbind/",
     "<rootDir>/client/docs/",
-    "<rootDir>/client/src/_site/",   // ⬅️ important
+    "<rootDir>/client/src/_site/",  
     "<rootDir>/docs/",
     "<rootDir>/public/",
     "<rootDir>/build/",
     "<rootDir>/dist/",
-    "<rootDir>/client/coverage/"
+    "<rootDir>/client/coverage/",
   ],
-  coverageDirectory: "<rootDir>/coverage",
+  coverageDirectory: "<rootDir>/client/coverage",
   coverageThreshold: { global: { lines: 90, functions: 90 } },
 };

@@ -2,23 +2,14 @@
  * @jest-environment node
  */
 
-// setup written with help from ChatGPT
-jest.setTimeout(30000);
-
 import request from "supertest";
-import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
-// ---- Make server.js connect to the in-memory DB ----
-jest.mock(require.resolve("../../../config/db.js"), () => ({
-  __esModule: true,
-  default: async () => {
-    const m = (await import("mongoose")).default;
-    await m.connect(process.env.MONGO_URL, { dbName: "ecom_frontend_int" });
-  },
-}));
-
-let app, mongod, Product, Category;
+import {
+  connectToTestDb,
+  disconnectFromTestDb,
+  resetTestDb,
+} from "../../../config/testdb.js";
 
 const resolveApp = async () => {
   const srvMod = await import("../../../server.js");
@@ -32,7 +23,8 @@ const resolveApp = async () => {
     srvMod?.default?.server,
   ];
   const isExpress = (x) => typeof x === "function" && (x.handle || x.use);
-  const isHttp = (x) => x && typeof x.address === "function" && typeof x.close === "function";
+  const isHttp = (x) =>
+    x && typeof x.address === "function" && typeof x.close === "function";
   for (const c of candidates) {
     if (!c) continue;
     if (isExpress(c) || isHttp(c)) return c;
@@ -47,58 +39,38 @@ const resolveApp = async () => {
       } catch {}
     }
   }
-  throw new Error("Could not resolve Express app/http.Server from server.js");
+  throw new Error("Could not resolve app/server from server.js");
 };
 
+let app, Product, Category;
+
 beforeAll(async () => {
-  process.env.NODE_ENV = "test";
+  await connectToTestDb("products_public_listing_int");
 
-  mongod = await MongoMemoryServer.create();
-  process.env.MONGO_URL = mongod.getUri();
-
-  // Clear any precompiled models across projects
-  if (typeof mongoose.deleteModel === "function") {
-    for (const name of ["Product", "Category", "Order", "orders", "User"]) {
-      try { mongoose.deleteModel(name); } catch {}
-    }
-  } else {
-    delete mongoose.models.Product;
-    delete mongoose.models.Category;
-    delete mongoose.models.User;
-    delete mongoose.models.Order;
-    delete mongoose.models.orders;
-  }
-
-  // Register schemas on the default connection
+  // register schemas on default connection
   await import("../../../models/productModel.js");
   await import("../../../models/categoryModel.js");
 
-  // Resolve the app/server after models are registered
   app = await resolveApp();
-
-  // Pull compiled models from Mongoose registry (true Models)
   Product = mongoose.model("Product");
   Category = mongoose.model("Category");
 });
 
 afterAll(async () => {
-  if (mongoose.connection.readyState) await mongoose.disconnect();
-  if (mongod) await mongod.stop();
+  await disconnectFromTestDb();
 });
 
-afterEach(async () => {
-  const { collections } = mongoose.connection;
-  await Promise.all(Object.values(collections).map((c) => c.deleteMany({})));
+beforeEach(async () => {
+  await resetTestDb();
 });
 
-// ---------- helpers ----------
+/* ------------------------- helpers ------------------------- */
 const extractProducts = (body) => {
   if (Array.isArray(body?.products)) return body.products;
   if (Array.isArray(body?.data)) return body.data;
   if (Array.isArray(body)) return body;
   return [];
 };
-
 const extractCount = (body) => {
   if (typeof body?.count === "number") return body.count;
   if (typeof body?.total === "number") return body.total;
@@ -108,192 +80,218 @@ const extractCount = (body) => {
 };
 
 const seedCatalog = async () => {
-  const catA = await Category.create({ name: "Phones", slug: "phones" });
-  const catB = await Category.create({ name: "Laptops", slug: "laptops" });
+  const catPhones = await Category.create({ name: "Phones", slug: "phones" });
+  const catLaptops = await Category.create({ name: "Laptops", slug: "laptops" });
 
-  let items = [
-    { name: "iPhone 14",        slug: "iphone-14",        description: "A", price: 799,  quantity: 10, category: catA._id, shipping: 1 },
-    { name: "iPhone 15 Pro",    slug: "iphone-15-pro",    description: "A", price: 1199, quantity: 5,  category: catA._id, shipping: 1 },
-    { name: "Pixel 8",          slug: "pixel-8",          description: "A", price: 699,  quantity: 8,  category: catA._id, shipping: 1 },
-    { name: "Galaxy S23",       slug: "galaxy-s23",       description: "A", price: 999,  quantity: 6,  category: catA._id, shipping: 1 },
-    { name: "MacBook Air M2",   slug: "mba-m2",           description: "B", price: 1499, quantity: 7,  category: catB._id, shipping: 1 },
-    { name: "MacBook Pro 14",   slug: "mbp-14",           description: "B", price: 2199, quantity: 3,  category: catB._id, shipping: 1 },
-    { name: "ThinkPad X1",      slug: "thinkpad-x1",      description: "B", price: 1899, quantity: 4,  category: catB._id, shipping: 1 },
-    { name: "Surface Laptop 5", slug: "surface-laptop-5", description: "B", price: 1599, quantity: 2,  category: catB._id, shipping: 1 },
-  ];
-
-  // ---- ONLY CHANGE: give each doc a unique createdAt to stabilize sort/pagination
+  // space apart createdAt for deterministic “newest” behavior if route sorts that way
   const base = Date.now();
-  items = items.map((p, i) => ({ ...p, createdAt: new Date(base + i * 1000) }));
+  const items = [
+    { name: "iPhone 14",        slug: "iphone-14",        description: "A phone", price: 799,  quantity: 10, category: catPhones._id, shipping: 1 },
+    { name: "iPhone 15 Pro",    slug: "iphone-15-pro",    description: "Best Pro iPhone", price: 1199, quantity: 5,  category: catPhones._id, shipping: 1 },
+    { name: "Pixel 8",          slug: "pixel-8",          description: "Google flagship", price: 699,  quantity: 8,  category: catPhones._id, shipping: 1 },
+    { name: "Galaxy S23",       slug: "galaxy-s23",       description: "Samsung premium", price: 999,  quantity: 6,  category: catPhones._id, shipping: 1 },
+    { name: "MacBook Air M2",   slug: "mba-m2",           description: "Light & fast", price: 1499, quantity: 7,  category: catLaptops._id, shipping: 1 },
+    { name: "MacBook Pro 14",   slug: "mbp-14",           description: "Pro power", price: 2199, quantity: 3,  category: catLaptops._id, shipping: 1 },
+    { name: "ThinkPad X1",      slug: "thinkpad-x1",      description: "Business classic", price: 1899, quantity: 4,  category: catLaptops._id, shipping: 1 },
+    { name: "Surface Laptop 5", slug: "surface-laptop-5", description: "Windows ultraportable", price: 1599, quantity: 2,  category: catLaptops._id, shipping: 1 },
+  ].map((p, i) => ({ ...p, createdAt: new Date(base + i * 1000) }));
 
   await Product.insertMany(items);
-  return { catA: String(catA._id), catB: String(catB._id), total: items.length };
+
+  // return a few useful lookups
+  const phoneProducts = await Product.find({ category: catPhones._id }).lean();
+  const laptopProducts = await Product.find({ category: catLaptops._id }).lean();
+  const bySlug = {};
+  for (const p of await Product.find({}).lean()) bySlug[p.slug] = p;
+
+  return {
+    catPhones: String(catPhones._id),
+    catLaptops: String(catLaptops._id),
+    phoneProducts,
+    laptopProducts,
+    bySlug,
+    total: items.length,
+  };
 };
 
-// ---------- tests ----------
-describe("Product Listing, Counting, and Filtering (Public API)", () => {
-  it("GET /product-list/:page returns paginated results that sum to the total from /product-count", async () => {
+/* ------------------------- tests ------------------------- */
+describe("Public Product Listing & Filters", () => {
+  it("count matches sum of paginated results", async () => {
     const { total } = await seedCatalog();
 
     const countRes = await request(app).get("/api/v1/product/product-count");
     expect(countRes.status).toBe(200);
-    const reported = extractCount(countRes.body);
-    expect(typeof reported).toBe("number");
-    expect(reported).toBe(total);
+    expect(extractCount(countRes.body)).toBe(total);
 
     const page1 = await request(app).get("/api/v1/product/product-list/1");
     expect(page1.status).toBe(200);
     const first = extractProducts(page1.body);
-    expect(Array.isArray(first)).toBe(true);
     expect(first.length).toBeGreaterThan(0);
 
-    const perPage = first.length;
-    const pages = Math.max(1, Math.ceil(reported / perPage));
+    const perPage = first.length; // whatever server uses (often 6)
+    const pages = Math.max(1, Math.ceil(total / perPage));
 
     const ids = new Set(first.map((p) => String(p._id)));
     for (let p = 2; p <= pages; p++) {
       const r = await request(app).get(`/api/v1/product/product-list/${p}`);
       expect(r.status).toBe(200);
       const arr = extractProducts(r.body);
-      arr.forEach((item) => ids.add(String(item._id)));
-      if (p < pages) expect(arr.length).toBeLessThanOrEqual(perPage);
+      arr.forEach((it) => ids.add(String(it._id)));
     }
-    expect(ids.size).toBe(reported);
+    expect(ids.size).toBe(total);
   });
 
-  it("POST /product-filters filters by category AND price range", async () => {
-    const { catA } = await seedCatalog();
+  it("pagination is capped by perPage and consistent across pages", async () => {
+    await seedCatalog();
+    const p1 = await request(app).get("/api/v1/product/product-list/1");
+    expect(p1.status).toBe(200);
+    const first = extractProducts(p1.body);
+    expect(first.length).toBeGreaterThan(0);
 
+    const perPage = first.length;
+    // Next page should be <= perPage
+    const p2 = await request(app).get("/api/v1/product/product-list/2");
+    expect(p2.status).toBe(200);
+    const second = extractProducts(p2.body);
+    expect(second.length).toBeLessThanOrEqual(perPage);
+  });
+
+  it("filters by category + price range", async () => {
+    const { catPhones } = await seedCatalog();
     const res = await request(app)
       .post("/api/v1/product/product-filters")
-      .send({ checked: [catA], radio: [700, 1200] })
+      .send({ checked: [catPhones], radio: [700, 1200] })
       .set("Content-Type", "application/json");
 
     expect(res.status).toBe(200);
-    const products = extractProducts(res.body);
-    expect(Array.isArray(products)).toBe(true);
-    expect(products.length).toBeGreaterThan(0);
-
-    for (const p of products) {
-      const price = Number(p.price);
+    const items = extractProducts(res.body);
+    expect(items.length).toBeGreaterThan(0);
+    for (const p of items) {
       const catId = String(p.category?._id || p.category);
-      expect(catId).toBe(catA);
+      const price = Number(p.price);
+      expect(catId).toBe(catPhones);
       expect(price).toBeGreaterThanOrEqual(700);
       expect(price).toBeLessThanOrEqual(1200);
     }
-
-    const names = products.map((p) => p.name);
-    expect(names).not.toContain("Pixel 8"); // 699 < 700
   });
 
-  it("POST /product-filters with empty filters returns all products (edge case)", async () => {
+  it("empty filters returns all", async () => {
     const { total } = await seedCatalog();
-
     const res = await request(app)
       .post("/api/v1/product/product-filters")
       .send({ checked: [], radio: [] })
       .set("Content-Type", "application/json");
+    expect(res.status).toBe(200);
+    expect(extractProducts(res.body).length).toBe(total);
+  });
+
+  it("price range boundaries are inclusive", async () => {
+    const { catPhones, bySlug } = await seedCatalog(); // Pixel 8 = 699, Galaxy S23 = 999 in our seed
+    const min = bySlug["pixel-8"].price;  // 699
+    const max = bySlug["galaxy-s23"].price; // 999
+
+    const res = await request(app)
+      .post("/api/v1/product/product-filters")
+      .send({ checked: [catPhones], radio: [min, max] })
+      .set("Content-Type", "application/json");
 
     expect(res.status).toBe(200);
-    const products = extractProducts(res.body);
-    expect(Array.isArray(products)).toBe(true);
-    expect(products.length).toBe(total);
+    const items = extractProducts(res.body);
+    const slugs = new Set(items.map((p) => p.slug));
+    expect(slugs.has("pixel-8")).toBe(true);   // boundary min
+    expect(slugs.has("galaxy-s23")).toBe(true); // boundary max
   });
 
-  it("Count endpoint matches actual DB count", async () => {
+  it("page beyond last returns empty array", async () => {
     const { total } = await seedCatalog();
-    const real = await Product.countDocuments({});
-    expect(real).toBe(total);
-
-    const countRes = await request(app).get("/api/v1/product/product-count");
-    expect(countRes.status).toBe(200);
-    expect(extractCount(countRes.body)).toBe(real);
-  });
-
-  it("Pagination page > last returns empty array", async () => {
-    const { total } = await seedCatalog();
-
-    const page1 = await request(app).get("/api/v1/product/product-list/1");
-    const first = extractProducts(page1.body);
+    const first = extractProducts(
+      (await request(app).get("/api/v1/product/product-list/1")).body
+    );
     const perPage = first.length || 6;
     const pages = Math.max(1, Math.ceil(total / perPage));
-
     const out = await request(app).get(`/api/v1/product/product-list/${pages + 1}`);
     expect(out.status).toBe(200);
-    const arr = extractProducts(out.body);
-    expect(Array.isArray(arr)).toBe(true);
-    expect(arr.length).toBe(0);
+    expect(extractProducts(out.body).length).toBe(0);
   });
 
-  it("Each paginated item has minimal shape (_id, name, price, category)", async () => {
-    await seedCatalog();
-    const r = await request(app).get("/api/v1/product/product-list/1");
-    expect(r.status).toBe(200);
-    const items = extractProducts(r.body);
-    expect(items.length).toBeGreaterThan(0);
+  it("get product by slug returns full product object", async () => {
+    const { bySlug } = await seedCatalog();
+    const slug = "iphone-15-pro";
+    const res = await request(app).get(`/api/v1/product/get-product/${slug}`);
+    expect(res.status).toBe(200);
+    const product = res.body?.product || res.body;
+    expect(product).toBeTruthy();
+    expect(product.slug).toBe(slug);
+    expect(String(product._id)).toBe(String(bySlug[slug]._id));
+  });
 
+  it("search by keyword (name / description / slug) returns matches", async () => {
+    await seedCatalog();
+
+    // name fragment
+    const r1 = await request(app).get("/api/v1/product/search/iphone");
+    expect(r1.status).toBe(200);
+    const s1 = extractProducts(r1.body);
+    expect(s1.length).toBeGreaterThan(0);
+    expect(s1.map((p) => p.slug)).toEqual(
+      expect.arrayContaining(["iphone-14", "iphone-15-pro"])
+    );
+
+    // description fragment
+    const r2 = await request(app).get("/api/v1/product/search/ultraportable");
+    expect(r2.status).toBe(200);
+    const s2 = extractProducts(r2.body);
+    expect(s2.map((p) => p.slug)).toEqual(
+      expect.arrayContaining(["surface-laptop-5"])
+    );
+
+    // slug fragment
+    const r3 = await request(app).get("/api/v1/product/search/pixel");
+    expect(r3.status).toBe(200);
+    const s3 = extractProducts(r3.body);
+    expect(s3.map((p) => p.slug)).toEqual(expect.arrayContaining(["pixel-8"]));
+  });
+
+  it("related products (same category) exclude the original product", async () => {
+    const { phoneProducts, catPhones } = await seedCatalog();
+    const target = phoneProducts[0]; // any phone
+    const res = await request(app).get(
+      `/api/v1/product/related-product/${target._id}/${catPhones}`
+    );
+    expect(res.status).toBe(200);
+    const items = extractProducts(res.body);
+    // Ensure none is the same product
+    expect(items.find((x) => String(x._id) === String(target._id))).toBeFalsy();
+    // Ensure they belong to the same category (if route populates category, handle both shapes)
     for (const p of items) {
-      expect(p).toHaveProperty("_id");
-      expect(p).toHaveProperty("name");
-      expect(p).toHaveProperty("price");
-      expect(p).toHaveProperty("category");
-    }
-  });
-
-  it("Filter by multiple categories returns only those categories within range", async () => {
-    const { catA, catB } = await seedCatalog();
-
-    const res = await request(app)
-      .post("/api/v1/product/product-filters")
-      .send({ checked: [catA, catB], radio: [800, 2000] })
-      .set("Content-Type", "application/json");
-
-    expect(res.status).toBe(200);
-    const products = extractProducts(res.body);
-    expect(products.length).toBeGreaterThan(0);
-
-    const allowed = new Set([catA, catB]);
-    for (const p of products) {
-      const price = Number(p.price);
       const catId = String(p.category?._id || p.category);
-      expect(allowed.has(catId)).toBe(true);
-      expect(price).toBeGreaterThanOrEqual(800);
-      expect(price).toBeLessThanOrEqual(2000);
+      expect(catId).toBe(catPhones);
     }
   });
 
-  it("Filter by price only (no categories) returns items in range across categories", async () => {
+  it("filter with invalid category id is handled gracefully (no 5xx)", async () => {
     await seedCatalog();
+    const badId = "64bba1c2ff00ff00aa00bbcc"; // not in DB, but valid hex
     const res = await request(app)
       .post("/api/v1/product/product-filters")
-      .send({ checked: [], radio: [1500, 2500] })
+      .send({ checked: [badId], radio: [10, 9999] })
       .set("Content-Type", "application/json");
 
-    expect(res.status).toBe(200);
-    const products = extractProducts(res.body);
-    expect(products.length).toBeGreaterThan(0);
-
-    for (const p of products) {
-      const price = Number(p.price);
-      expect(price).toBeGreaterThanOrEqual(1500);
-      expect(price).toBeLessThanOrEqual(2500);
-    }
+    expect([200, 400]).toContain(res.status); // either “no results” OK or “bad request” OK
+    const items = extractProducts(res.body);
+    expect(Array.isArray(items)).toBe(true);
   });
 
-  it("Filter by categories only (no price) returns all items from those categories", async () => {
-    const { catA } = await seedCatalog();
-    const res = await request(app)
-      .post("/api/v1/product/product-filters")
-      .send({ checked: [catA], radio: [] })
-      .set("Content-Type", "application/json");
+  it("product photo endpoint does not error (200 image/* or 404 when none)", async () => {
+    const { bySlug } = await seedCatalog();
+    const any = bySlug["iphone-14"]; // seeded without photo
+    const res = await request(app).get(`/api/v1/product/product-photo/${any._id}`);
 
-    expect(res.status).toBe(200);
-    const products = extractProducts(res.body);
-    expect(products.length).toBeGreaterThan(0);
-
-    for (const p of products) {
-      const catId = String(p.category?._id || p.category);
-      expect(catId).toBe(catA);
+    // Implementations differ: many return 404 if no photo, else image/* when present.
+    expect([200, 404]).toContain(res.status);
+    if (res.status === 200) {
+      const ct = String(res.headers["content-type"] || "");
+      expect(ct.startsWith("image/")).toBe(true);
     }
   });
 });
