@@ -124,14 +124,12 @@ async function setAntSelectByLabel(page, idx, labelRx) {
 
 async function updateFields(page, { name, description, price, quantity, categoryLabel, shippingLabel, photoPath }) {
   if (categoryLabel) await setAntSelectByLabel(page, 0, categoryLabel);
-  if (photoPath) {
-    const btn = page.getByRole('button', { name: /upload photo/i }).or(page.locator('label:has(input[type="file"])')).first();
-    await btn.click().catch(() => {});
-    await page.locator('input[type="file"]').setInputFiles(photoPath);
-  }
-  if (name !== undefined) await page.getByRole('textbox', { name: /write a name/i }).fill(String(name));
+
+  if (name !== undefined) await page.locator('[placeholder="write a name"]').fill(String(name));
+  if (price !== undefined) await page.locator('[placeholder="write a Price"]').fill(String(price));
+
   if (description !== undefined) await page.getByRole('textbox', { name: /write a description/i }).fill(String(description));
-  if (price !== undefined) await page.getByPlaceholder(/write a price/i).fill(String(price));
+  
   if (quantity !== undefined) await page.getByPlaceholder(/write a quantity/i).fill(String(quantity));
   if (shippingLabel) {
     await page.locator('#rc_select_1').click();
