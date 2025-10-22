@@ -145,6 +145,18 @@ To begin unit testing with Jest in your project, follow these steps:
      npm run test
      ```
 
+### UI testing steps
+   1. Clone the repo onto your device
+   2. cd to cloned repo
+   3. run the command below to run tests
+   - **Frontend UI tests**
+     ```bash
+     npm run test:e2e
+     ```
+   4. An example screenshot is shown below with UI tests all working as intended.
+     <img width="794" height="711" alt="Screenshot 2025-10-22 at 10 20 29 AM" src="https://github.com/user-attachments/assets/859d010f-d981-43e6-bc1b-11744c8874e3" />
+
+
 ## Milestone 1
 
 ### 1. CI GitHub Workflow  
