@@ -355,3 +355,36 @@ export const getAllUsersController = async (req, res) => {
     });
   }
 };
+
+// DELETE /api/v1/auth/delete-users
+export const deleteUsersController = async (req, res) => {
+  try {
+    const { users } = req.body;
+
+    // Validate request body
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid request. 'users' must be a non-empty array of IDs.",
+      });
+    }
+
+    // Attempt deletion
+    const result = await userModel.deleteMany({ _id: { $in: users } });
+
+    // Response summary
+    return res.status(200).send({
+      success: true,
+      message: `${result.deletedCount} user(s) deleted successfully.`,
+      deletedCount: result.deletedCount,
+      requestedIds: users,
+    });
+  } catch (error) {
+    console.error("Error deleting users:", error);
+    return res.status(500).send({
+      success: false,
+      message: "Error while deleting users",
+      error: error.message,
+    });
+  }
+};

@@ -14,6 +14,7 @@ import {
   realtedProductController,
   searchProductController,
   updateProductController,
+  deleteOrdersController,
 } from "../controllers/productController.js";
 import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
 import formidable from "express-formidable";
@@ -76,5 +77,7 @@ router.get("/product-category/:slug", productCategoryController);
 // Payments
 router.get("/braintree/token", braintreeTokenController); // PUBLIC for client token
 router.post("/braintree/payment", requireSignIn, brainTreePaymentController); // user checkout
+
+router.delete("/delete-orders", requireSignIn, isAdmin, deleteOrdersController);
 
 export default router;

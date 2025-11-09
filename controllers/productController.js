@@ -597,3 +597,29 @@ export const brainTreePaymentController = async (req, res) => {
     // keep silent to match tests that expect no noisy logs here
   }
 };
+
+// delete multiple orders by id
+export const deleteOrdersController = async (req, res) => {
+  try {
+    const { orders } = req.body;
+
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No order IDs provided.",
+      });
+    }
+
+    const result = await orderModel.deleteMany({ _id: { $in: orders } });
+
+    return res.status(200).json({
+      deletedCount: result.deletedCount || 0,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error deleting orders.",
+      error: error.message,
+    });
+  }
+};
